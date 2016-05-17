@@ -1,0 +1,118 @@
+package shopJava.queries;
+
+import akka.Done;
+import akka.NotUsed;
+import akka.actor.ActorSystem;
+import akka.stream.ActorMaterializer;
+import akka.stream.javadsl.Source;
+import com.mongodb.rx.client.MongoClient;
+import com.mongodb.rx.client.MongoClients;
+import com.mongodb.rx.client.MongoCollection;
+import com.mongodb.rx.client.MongoDatabase;
+import org.bson.Document;
+import rx.Observable;
+import shopJava.model.Credentials;
+import shopJava.model.Order;
+import shopJava.model.Result;
+import shopJava.model.User;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.CompletionStage;
+import java.util.concurrent.CountDownLatch;
+
+import static com.mongodb.client.model.Filters.eq;
+import static java.lang.Thread.sleep;
+import static rx.RxReactiveStreams.toPublisher;
+import static shopJava.util.Constants.*;
+import static shopJava.util.Util.checkUserLoggedIn;
+
+@SuppressWarnings("Convert2MethodRef")
+public class QueryJ10AkkaStreams {
+
+    public static void main(String[] args) throws Exception {
+        new QueryJ10AkkaStreams();
+    }
+
+    private final DAO dao = new DAO();
+
+    private class DAO {
+
+        private final MongoCollection<Document> usersCollection;
+        private final MongoCollection<Document> ordersCollection;
+
+        DAO() {
+            final MongoClient client = MongoClients.create();
+            final MongoDatabase db = client.getDatabase(SHOP_DB_NAME);
+            this.usersCollection = db.getCollection(USERS_COLLECTION_NAME);
+            this.ordersCollection = db.getCollection(ORDERS_COLLECTION_NAME);
+        }
+
+        Source<Optional<User>, NotUsed> findUserByName(final String name) {
+            Observable<Optional<User>> observable = usersCollection
+                    .find(eq("_id", name))
+                    .first()
+                    .map(doc -> new User(doc))      // no null check as we don't get null objects in the stream
+                    .toList()   // conversion to List to check whether we found a user with the specified name
+                    .map(users -> users.size() == 0 ? Optional.empty() : Optional.of(users.get(0)));
+            return Source.fromPublisher(toPublisher(observable));
+        }
+
+        Source<List<Order>, NotUsed> findOrdersByUsername(final String username) {
+            Observable<List<Order>> observable = ordersCollection
+                    .find(eq("username", username))
+                    .toObservable()
+                    .map(doc -> new Order(doc))
+                    .toList();
+            return Source.fromPublisher(toPublisher(observable));
+        }
+    }   // end DAO
+
+
+    private Source<String, NotUsed> logIn(final Credentials credentials) {
+        return dao.findUserByName(credentials.username)
+                .map(optUser -> checkUserLoggedIn(optUser, credentials))
+                .map(user -> user.name);
+    }
+
+    private Source<Result, NotUsed> processOrdersOf(final String username) {
+        return dao.findOrdersByUsername(username)
+                .map(orders -> new Result(username, orders));
+    }
+
+    private final ActorSystem system = ActorSystem.create("Sys");
+    private final ActorMaterializer materializer = ActorMaterializer.create(system);
+
+    private void eCommerceStatistics(final Credentials credentials, final boolean isLastInvocation) throws Exception {
+
+        System.out.println("--- Calculating eCommerce statistings for user \"" + credentials.username + "\" ...");
+
+        final CountDownLatch latch = new CountDownLatch(1);
+
+        Source<Result, NotUsed> src = logIn(credentials)
+                .flatMapMerge(1, username -> processOrdersOf(username));
+
+        CompletionStage<Done> future = src.runForeach(result -> result.display(), materializer);       // print to console
+
+        future.whenComplete((done, t) -> {
+            if (t != null) {
+                System.err.println(t.toString());
+            }
+            latch.countDown();
+            if (isLastInvocation) {
+                system.terminate();
+            }
+        });
+
+        latch.await();
+    }
+
+    private QueryJ10AkkaStreams() throws Exception {
+
+        eCommerceStatistics(new Credentials(LISA, "password"), false);
+        sleep(2000L);
+        eCommerceStatistics(new Credentials(LISA, "bad_password"), false);
+        sleep(2000L);
+        eCommerceStatistics(new Credentials(LISA.toUpperCase(), "password"), true);
+    }
+}
