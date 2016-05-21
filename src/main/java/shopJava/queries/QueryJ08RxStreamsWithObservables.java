@@ -1,9 +1,9 @@
 package shopJava.queries;
 
-import com.mongodb.rx.client.MongoClient;
-import com.mongodb.rx.client.MongoClients;
-import com.mongodb.rx.client.MongoCollection;
-import com.mongodb.rx.client.MongoDatabase;
+import com.mongodb.reactivestreams.client.MongoClient;
+import com.mongodb.reactivestreams.client.MongoClients;
+import com.mongodb.reactivestreams.client.MongoCollection;
+import com.mongodb.reactivestreams.client.MongoDatabase;
 import org.bson.Document;
 import org.reactivestreams.Publisher;
 import rx.Observable;
@@ -12,22 +12,20 @@ import shopJava.model.Order;
 import shopJava.model.Result;
 import shopJava.model.User;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 
 import static com.mongodb.client.model.Filters.eq;
 import static java.lang.Thread.sleep;
 import static rx.RxReactiveStreams.toObservable;
-import static rx.RxReactiveStreams.toPublisher;
 import static shopJava.util.Constants.*;
 import static shopJava.util.Util.checkUserLoggedIn;
 
 @SuppressWarnings("Convert2MethodRef")
-public class QueryJ08bRxStreamsWithObservables {
+public class QueryJ08RxStreamsWithObservables {
 
     public static void main(String[] args) throws Exception {
-        new QueryJ08bRxStreamsWithObservables();
+        new QueryJ08RxStreamsWithObservables();
     }
 
     private final DAO dao = new DAO();
@@ -44,35 +42,32 @@ public class QueryJ08bRxStreamsWithObservables {
             this.ordersCollection = db.getCollection(ORDERS_COLLECTION_NAME);
         }
 
-        Publisher<Optional<User>> findUserByName(final String name) {
-            Observable<Optional<User>> observable = usersCollection
+        Publisher<Document> findUserByName(final String name) {
+            return usersCollection
                     .find(eq("_id", name))
-                    .first()
-                    .map(doc -> new User(doc))      // no null check as we don't get null objects in the stream
-                    .toList()   // conversion to List to check whether we found a user with the specified name
-                    .map(users -> users.size() == 0 ? Optional.empty() : Optional.of(users.get(0)));
-            return toPublisher(observable);
+                    .first();
         }
 
-        Publisher<List<Order>> findOrdersByUsername(final String username) {
-            Observable<List<Order>> observable = ordersCollection
-                    .find(eq("username", username))
-                    .toObservable()
-                    .map(doc -> new Order(doc))
-                    .toList();
-            return toPublisher(observable);
+        Publisher<Document> findOrdersByUsername(final String username) {
+            return ordersCollection
+                    .find(eq("username", username));
         }
     }   // end DAO
 
 
     private Observable<String> logIn(final Credentials credentials) {
         return toObservable(dao.findUserByName(credentials.username))
+                .map(doc -> new User(doc))      // no null check as we don't get null objects in the stream
+                .toList()   // conversion to List to check whether we found a user with the specified name
+                .map(users -> (Optional<User>)(users.size() == 0 ? Optional.empty() : Optional.of(users.get(0))))
                 .map(optUser -> checkUserLoggedIn(optUser, credentials))
                 .map(user -> user.name);
     }
 
     private Observable<Result> processOrdersOf(final String username) {
         return toObservable(dao.findOrdersByUsername(username))
+                .map(doc -> new Order(doc))
+                .toList()
                 .map(orders -> new Result(username, orders));
     }
 
@@ -93,7 +88,7 @@ public class QueryJ08bRxStreamsWithObservables {
         latch.await();
     }
 
-    private QueryJ08bRxStreamsWithObservables() throws Exception {
+    private QueryJ08RxStreamsWithObservables() throws Exception {
 
         eCommercStatistics(new Credentials(LISA, "password"));
         sleep(2000L);

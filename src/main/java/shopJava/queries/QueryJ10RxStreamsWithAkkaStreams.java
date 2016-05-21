@@ -27,10 +27,10 @@ import static shopJava.util.Constants.*;
 import static shopJava.util.Util.checkUserLoggedIn;
 
 @SuppressWarnings("Convert2MethodRef")
-public class QueryJ09RxStreamsWithAkkaStreams {
+public class QueryJ10RxStreamsWithAkkaStreams {
 
     public static void main(String[] args) throws Exception {
-        new QueryJ09RxStreamsWithAkkaStreams();
+        new QueryJ10RxStreamsWithAkkaStreams();
     }
 
     private final DAO dao = new DAO();
@@ -104,7 +104,7 @@ public class QueryJ09RxStreamsWithAkkaStreams {
         latch.await();
     }
 
-    private QueryJ09RxStreamsWithAkkaStreams() throws Exception {
+    private QueryJ10RxStreamsWithAkkaStreams() throws Exception {
 
         eCommerceStatistics(new Credentials(LISA, "password"), false);
         sleep(2000L);

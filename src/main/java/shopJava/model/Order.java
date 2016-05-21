@@ -12,13 +12,13 @@ public class Order {
     public final String username;
     public final int amount;
 
-    public Order(int id, String username, int amount) {
+    public Order(final int id, final String username, final int amount) {
         this.id = id;
         this.username = username;
         this.amount = amount;
     }
 
-    public Order(Document doc) {
+    public Order(final Document doc) {
         this(doc.getInteger(ID), doc.getString(USERNAME), doc.getInteger(AMOUNT));
     }
 

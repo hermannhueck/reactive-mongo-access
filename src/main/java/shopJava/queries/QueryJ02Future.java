@@ -4,20 +4,21 @@ import com.mongodb.MongoClient;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import org.bson.Document;
-import shopJava.model.Order;
-import shopJava.model.User;
 import shopJava.model.Credentials;
+import shopJava.model.Order;
 import shopJava.model.Result;
+import shopJava.model.User;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import static com.mongodb.client.model.Filters.eq;
 import static java.lang.Thread.sleep;
 import static java.util.stream.Collectors.toList;
-import static javafx.scene.input.KeyCode.T;
 import static shopJava.util.Constants.*;
 import static shopJava.util.Util.checkUserLoggedIn;
 
@@ -47,15 +48,21 @@ public class QueryJ02Future {
 
         Future<Optional<User>> findUserByName(final String name) {
             return executor.submit(() -> {
-                final Document doc = usersCollection.find(eq("_id", name)).first();
-                return doc == null ? Optional.empty() : Optional.of(new User(doc));
+                final Document doc = usersCollection
+                        .find(eq("_id", name))
+                        .first();
+                return Optional.ofNullable(doc).map(User::new);
             });
         }
 
         Future<List<Order>> findOrdersByUsername(final String username) {
             return executor.submit(() -> {
-                final List<Document> docs = ordersCollection.find(eq("username", username)).into(new ArrayList<>());
-                return docs.stream().map(doc -> new Order(doc)).collect(toList());
+                final List<Document> docs = ordersCollection
+                        .find(eq("username", username))
+                        .into(new ArrayList<>());
+                return docs.stream()
+                        .map(doc -> new Order(doc))
+                        .collect(toList());
             });
         }
     }   // end DAO
@@ -82,7 +89,7 @@ public class QueryJ02Future {
         }
     }
 
-    private void eCommercStatistics(final Credentials credentials) {
+    private void eCommerceStatistics(final Credentials credentials) {
 
         System.out.println("--- Calculating eCommerce statistings of user \"" + credentials.username + "\" ...");
 
@@ -97,11 +104,11 @@ public class QueryJ02Future {
 
     private QueryJ02Future() throws Exception {
 
-        eCommercStatistics(new Credentials(LISA, "password"));
+        eCommerceStatistics(new Credentials(LISA, "password"));
         sleep(2000L);
-        eCommercStatistics(new Credentials(LISA, "bad_password"));
+        eCommerceStatistics(new Credentials(LISA, "bad_password"));
         sleep(2000L);
-        eCommercStatistics(new Credentials(LISA.toUpperCase(), "password"));
+        eCommerceStatistics(new Credentials(LISA.toUpperCase(), "password"));
 
         executor.shutdown();
     }

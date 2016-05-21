@@ -11,7 +11,7 @@ public class User {
     public final String name;
     public final String password;
 
-    public User(String name, String password) {
+    public User(final String name, final String password) {
         this.name = name;
         this.password = password;
     }

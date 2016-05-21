@@ -52,7 +52,7 @@ public class QueryJ04bCompletionStageCompleteRefactored {
 
             Supplier<Optional<User>> supplier = () -> {
                 Document doc = usersCollection.find(eq("_id", name)).first();
-                return doc == null ? Optional.empty() : Optional.of(new User(doc));
+                return Optional.ofNullable(doc).map(User::new);
             };
 
             return provideResultAsync(supplier, executor);
@@ -97,7 +97,7 @@ public class QueryJ04bCompletionStageCompleteRefactored {
                 .thenApply(orders -> new Result(username, orders));
     }
 
-    private void eCommercStatistics(final Credentials credentials, final boolean isLastInvocation) {
+    private void eCommerceStatistics(final Credentials credentials, final boolean isLastInvocation) {
 
         System.out.println("--- Calculating eCommerce statistings for user \"" + credentials.username + "\" ...");
 
@@ -117,10 +117,10 @@ public class QueryJ04bCompletionStageCompleteRefactored {
 
     private QueryJ04bCompletionStageCompleteRefactored() throws Exception {
 
-        eCommercStatistics(new Credentials(LISA, "password"), false);
+        eCommerceStatistics(new Credentials(LISA, "password"), false);
         sleep(2000L);
-        eCommercStatistics(new Credentials(LISA, "bad_password"), false);
+        eCommerceStatistics(new Credentials(LISA, "bad_password"), false);
         sleep(2000L);
-        eCommercStatistics(new Credentials(LISA.toUpperCase(), "password"), true);
+        eCommerceStatistics(new Credentials(LISA.toUpperCase(), "password"), true);
     }
 }

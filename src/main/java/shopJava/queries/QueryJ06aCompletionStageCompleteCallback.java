@@ -46,7 +46,7 @@ public class QueryJ06aCompletionStageCompleteCallback {
 
             final CompletableFuture<Optional<User>> future = new CompletableFuture<>();
 
-            SingleResultCallback<Optional<User>> callback = (user, t) -> {
+            final SingleResultCallback<Optional<User>> callback = (user, t) -> {
                 if (t == null) {
                     future.complete(user);
                 } else {
@@ -66,7 +66,7 @@ public class QueryJ06aCompletionStageCompleteCallback {
 
             final CompletableFuture<List<Order>> future = new CompletableFuture<>();
 
-            SingleResultCallback<List<Order>> callback = (orders, t) -> {
+            final SingleResultCallback<List<Order>> callback = (orders, t) -> {
                 if (t == null) {
                     future.complete(orders);
                 } else {

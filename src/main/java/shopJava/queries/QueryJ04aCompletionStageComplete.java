@@ -54,7 +54,7 @@ public class QueryJ04aCompletionStageComplete {
             final Runnable runnable = () -> {
                 try {
                     Document doc = usersCollection.find(eq("_id", name)).first();
-                    Optional<User> optUser = doc == null ? Optional.empty() : Optional.of(new User(doc));
+                    Optional<User> optUser = Optional.ofNullable(doc).map(User::new);
                     future.complete(optUser);
                 } catch (Exception e) {
                     future.completeExceptionally(e);
@@ -72,8 +72,12 @@ public class QueryJ04aCompletionStageComplete {
 
             final Runnable runnable = () -> {
                 try {
-                    List<Document> docs = ordersCollection.find(eq("username", username)).into(new ArrayList<>());
-                    List<Order> orders = docs.stream().map(doc -> new Order(doc)).collect(toList());
+                    List<Document> docs = ordersCollection.
+                            find(eq("username", username))
+                            .into(new ArrayList<>());
+                    List<Order> orders = docs.stream()
+                            .map(doc -> new Order(doc))
+                            .collect(toList());
                     future.complete(orders);
                 } catch (Exception e) {
                     future.completeExceptionally(e);
@@ -99,7 +103,7 @@ public class QueryJ04aCompletionStageComplete {
                 .thenApply(orders -> new Result(username, orders));
     }
 
-    private void eCommercStatistics(final Credentials credentials, final boolean isLastInvocation) {
+    private void eCommerceStatistics(final Credentials credentials, final boolean isLastInvocation) {
 
         System.out.println("--- Calculating eCommerce statistings for user \"" + credentials.username + "\" ...");
 
@@ -119,10 +123,10 @@ public class QueryJ04aCompletionStageComplete {
 
     private QueryJ04aCompletionStageComplete() throws Exception {
 
-        eCommercStatistics(new Credentials(LISA, "password"), false);
+        eCommerceStatistics(new Credentials(LISA, "password"), false);
         sleep(2000L);
-        eCommercStatistics(new Credentials(LISA, "bad_password"), false);
+        eCommerceStatistics(new Credentials(LISA, "bad_password"), false);
         sleep(2000L);
-        eCommercStatistics(new Credentials(LISA.toUpperCase(), "password"), true);
+        eCommerceStatistics(new Credentials(LISA.toUpperCase(), "password"), true);
     }
 }

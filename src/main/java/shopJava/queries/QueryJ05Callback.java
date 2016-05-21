@@ -49,7 +49,7 @@ public class QueryJ05Callback {
                     .first(callback);
         }
 
-        void findOrdersByUsername(final String username, SingleResultCallback<List<Order>> callback) {
+        void findOrdersByUsername(final String username, final SingleResultCallback<List<Order>> callback) {
             ordersCollection
                     .find(eq("username", username))
                     .map(doc -> new Order(doc))

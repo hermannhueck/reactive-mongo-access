@@ -43,15 +43,21 @@ public class QueryJ03CompletionStage {
 
         CompletionStage<Optional<User>> findUserByName(final String name) {
             return CompletableFuture.supplyAsync(() -> {
-                Document doc = usersCollection.find(eq("_id", name)).first();
-                return doc == null ? Optional.empty() : Optional.of(new User(doc));
+                Document doc = usersCollection
+                        .find(eq("_id", name))
+                        .first();
+                return Optional.ofNullable(doc).map(User::new);
             });
         }
 
         CompletionStage<List<Order>> findOrdersByUsername(final String username) {
             return CompletableFuture.supplyAsync(() -> {
-                List<Document> docs = ordersCollection.find(eq("username", username)).into(new ArrayList<>());
-                return docs.stream().map(doc -> new Order(doc)).collect(toList());
+                List<Document> docs = ordersCollection
+                        .find(eq("username", username))
+                        .into(new ArrayList<>());
+                return docs.stream()
+                        .map(doc -> new Order(doc))
+                        .collect(toList());
             });
         }
     }   // end DAO
@@ -69,7 +75,7 @@ public class QueryJ03CompletionStage {
                 .thenApply(orders -> new Result(username, orders));
     }
 
-    private void eCommercStatistics(final Credentials credentials) {
+    private void eCommerceStatistics(final Credentials credentials) {
 
         System.out.println("--- Calculating eCommerce statistings of user \"" + credentials.username + "\" ...");
 
@@ -86,10 +92,10 @@ public class QueryJ03CompletionStage {
 
     private QueryJ03CompletionStage() throws Exception {
 
-        eCommercStatistics(new Credentials(LISA, "password"));
+        eCommerceStatistics(new Credentials(LISA, "password"));
         sleep(2000L);
-        eCommercStatistics(new Credentials(LISA, "bad_password"));
+        eCommerceStatistics(new Credentials(LISA, "bad_password"));
         sleep(2000L);
-        eCommercStatistics(new Credentials(LISA.toUpperCase(), "password"));
+        eCommerceStatistics(new Credentials(LISA.toUpperCase(), "password"));
     }
 }

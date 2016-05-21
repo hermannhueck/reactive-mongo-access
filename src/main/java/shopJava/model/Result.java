@@ -10,7 +10,7 @@ public class Result {
     public final int totalAmount;
     public final int avgAmount;
 
-    public Result(String username, List<Order> orders) {
+    public Result(final String username, final List<Order> orders) {
         this.username = username;
         // this.orders = orders;
         this.orderCount = orders.size();
@@ -18,11 +18,11 @@ public class Result {
         this.avgAmount = Math.round((100.0f * totalAmount / orderCount) / 100);
     }
 
-    private int calculateTotal(List<Order> orders) {
+    private int calculateTotal(final List<Order> orders) {
         return orders.stream().mapToInt(order -> amountOf(order)).sum();
     }
 
-    private int amountOf(Order order) {
+    private int amountOf(final Order order) {
         return order.amount;
     }
 

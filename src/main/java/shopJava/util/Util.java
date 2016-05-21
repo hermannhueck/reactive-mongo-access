@@ -9,7 +9,7 @@ public class Util {
 
     public static User checkUserLoggedIn(final Optional<User> optUser, final Credentials credentials) {
 
-        if (!optUser.isPresent()) {
+        if (!optUser.isPresent()) {     // replaces if (user != null)
             throw new RuntimeException(new IllegalAccessException("User unknown: " + credentials.username));
         }
         final User user = optUser.get();
@@ -20,5 +20,13 @@ public class Util {
             throw new RuntimeException(new IllegalAccessException("Bad password supplied for user: " + credentials.username));
         }
         return user;
+    }
+
+    public static void sleep(final int seconds) {
+        try {
+            Thread.sleep(seconds * 1000L);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 }
