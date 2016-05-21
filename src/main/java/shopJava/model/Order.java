@@ -5,7 +5,7 @@ import org.bson.Document;
 public class Order {
 
     private static final String ID = "_id";
-    private static final String USERNAME = "username";
+    private static final String USERNAME = "first";
     private static final String AMOUNT = "amount";
 
     public final int id;

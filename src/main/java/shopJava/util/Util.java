@@ -14,7 +14,7 @@ public class Util {
         }
         final User user = optUser.get();
         if (!user.name.equals(credentials.username)) {
-            throw new RuntimeException(new IllegalAccessException("Incorrect username: " + credentials.username));
+            throw new RuntimeException(new IllegalAccessException("Incorrect first: " + credentials.username));
         }
         if (!user.password.equals(credentials.password)) {
             throw new RuntimeException(new IllegalAccessException("Bad password supplied for user: " + credentials.username));
@@ -28,5 +28,9 @@ public class Util {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+    }
+
+    public static int average(int totalAmount, int orderCount) {
+        return Math.round((100.0f * totalAmount / orderCount) / 100);
     }
 }

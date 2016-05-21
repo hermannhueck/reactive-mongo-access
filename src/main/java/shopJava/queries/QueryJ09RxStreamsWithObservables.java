@@ -76,7 +76,7 @@ public class QueryJ09RxStreamsWithObservables {
                 .map(orders -> new Result(username, orders));
     }
 
-    private void eCommercStatistics(final Credentials credentials) throws Exception {
+    private void eCommerceStatistics(final Credentials credentials) throws Exception {
 
         System.out.println("--- Calculating eCommerce statistings for user \"" + credentials.username + "\" ...");
 
@@ -95,10 +95,10 @@ public class QueryJ09RxStreamsWithObservables {
 
     private QueryJ09RxStreamsWithObservables() throws Exception {
 
-        eCommercStatistics(new Credentials(LISA, "password"));
+        eCommerceStatistics(new Credentials(LISA, "password"));
         sleep(2000L);
-        eCommercStatistics(new Credentials(LISA, "bad_password"));
+        eCommerceStatistics(new Credentials(LISA, "bad_password"));
         sleep(2000L);
-        eCommercStatistics(new Credentials(LISA.toUpperCase(), "password"));
+        eCommerceStatistics(new Credentials(LISA.toUpperCase(), "password"));
     }
 }

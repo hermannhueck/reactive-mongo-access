@@ -56,7 +56,7 @@ public class QueryJ06aCompletionStageCompleteCallback {
 
             usersCollection
                     .find(eq("_id", name))
-                    .map(doc -> (Optional<User>)(doc == null ? Optional.empty() : Optional.of(new User(doc))))
+                    .map(doc -> Optional.ofNullable(doc).map(User::new))
                     .first(callback);
 
             return future;
@@ -96,7 +96,7 @@ public class QueryJ06aCompletionStageCompleteCallback {
                 .thenApply(orders -> new Result(username, orders));
     }
 
-    private void eCommercStatistics(final Credentials credentials) throws Exception {
+    private void eCommerceStatistics(final Credentials credentials) throws Exception {
 
         System.out.println("--- Calculating eCommerce statistings for user \"" + credentials.username + "\" ...");
 
@@ -118,10 +118,10 @@ public class QueryJ06aCompletionStageCompleteCallback {
 
     private QueryJ06aCompletionStageCompleteCallback() throws Exception {
 
-        eCommercStatistics(new Credentials(LISA, "password"));
+        eCommerceStatistics(new Credentials(LISA, "password"));
         sleep(2000L);
-        eCommercStatistics(new Credentials(LISA, "bad_password"));
+        eCommerceStatistics(new Credentials(LISA, "bad_password"));
         sleep(2000L);
-        eCommercStatistics(new Credentials(LISA.toUpperCase(), "password"));
+        eCommerceStatistics(new Credentials(LISA.toUpperCase(), "password"));
     }
 }

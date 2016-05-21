@@ -5,17 +5,26 @@ import java.util.List;
 public class Result {
 
     public final String username;
-    // public final List<Order> orders;
     public final int orderCount;
     public final int totalAmount;
     public final int avgAmount;
 
+    public Result(final String username, final int orderCount, final int totalAmount, final int avgAmount) {
+        this.username = username;
+        this.orderCount = orderCount;
+        this.totalAmount = totalAmount;
+        this.avgAmount = avgAmount;
+    }
+
     public Result(final String username, final List<Order> orders) {
         this.username = username;
-        // this.orders = orders;
         this.orderCount = orders.size();
         this.totalAmount = calculateTotal(orders);
-        this.avgAmount = Math.round((100.0f * totalAmount / orderCount) / 100);
+        this.avgAmount = calculateAverage();
+    }
+
+    private int calculateAverage() {
+        return Math.round((100.0f * totalAmount / orderCount) / 100);
     }
 
     private int calculateTotal(final List<Order> orders) {
@@ -29,7 +38,7 @@ public class Result {
     @Override
     public String toString() {
         return "Result{" +
-                "username='" + username + '\'' +
+                "first='" + username + '\'' +
                 ", orderCount=" + orderCount +
                 ", totalAmount=" + totalAmount +
                 ", avgAmount=" + avgAmount +

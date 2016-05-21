@@ -22,10 +22,10 @@ import static shopJava.util.Constants.*;
 import static shopJava.util.Util.checkUserLoggedIn;
 
 @SuppressWarnings("Convert2MethodRef")
-public class QueryJ07RxObservables {
+public class QueryJ07aRxObservables {
 
     public static void main(String[] args) throws Exception {
-        new QueryJ07RxObservables();
+        new QueryJ07aRxObservables();
     }
 
     private final DAO dao = new DAO();
@@ -72,7 +72,7 @@ public class QueryJ07RxObservables {
                 .map(orders -> new Result(username, orders));
     }
 
-    private void eCommercStatistics(final Credentials credentials) throws Exception {
+    private void eCommerceStatistics(final Credentials credentials) throws Exception {
 
         System.out.println("--- Calculating eCommerce statistings for user \"" + credentials.username + "\" ...");
 
@@ -96,12 +96,12 @@ public class QueryJ07RxObservables {
         latch.await();
     }
 
-    private QueryJ07RxObservables() throws Exception {
+    private QueryJ07aRxObservables() throws Exception {
 
-        eCommercStatistics(new Credentials(LISA, "password"));
+        eCommerceStatistics(new Credentials(LISA, "password"));
         sleep(2000L);
-        eCommercStatistics(new Credentials(LISA, "bad_password"));
+        eCommerceStatistics(new Credentials(LISA, "bad_password"));
         sleep(2000L);
-        eCommercStatistics(new Credentials(LISA.toUpperCase(), "password"));
+        eCommerceStatistics(new Credentials(LISA.toUpperCase(), "password"));
     }
 }

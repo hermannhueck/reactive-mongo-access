@@ -1,31 +1,29 @@
 package shopJava.queries;
 
-import com.mongodb.reactivestreams.client.MongoClient;
-import com.mongodb.reactivestreams.client.MongoClients;
-import com.mongodb.reactivestreams.client.MongoCollection;
-import com.mongodb.reactivestreams.client.MongoDatabase;
+import com.mongodb.rx.client.MongoClient;
+import com.mongodb.rx.client.MongoClients;
+import com.mongodb.rx.client.MongoCollection;
+import com.mongodb.rx.client.MongoDatabase;
 import org.bson.Document;
-import org.reactivestreams.Publisher;
 import rx.Observable;
-import shopJava.model.Credentials;
-import shopJava.model.Order;
-import shopJava.model.Result;
-import shopJava.model.User;
+import rx.Observer;
+import shopJava.model.*;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 
 import static com.mongodb.client.model.Filters.eq;
 import static java.lang.Thread.sleep;
-import static rx.RxReactiveStreams.toObservable;
 import static shopJava.util.Constants.*;
+import static shopJava.util.Util.average;
 import static shopJava.util.Util.checkUserLoggedIn;
 
 @SuppressWarnings("Convert2MethodRef")
-public class QueryJ08RxStreamsWithObservables {
+public class QueryJ07bRxObservables {
 
     public static void main(String[] args) throws Exception {
-        new QueryJ08RxStreamsWithObservables();
+        new QueryJ07bRxObservables();
     }
 
     private final DAO dao = new DAO();
@@ -42,33 +40,35 @@ public class QueryJ08RxStreamsWithObservables {
             this.ordersCollection = db.getCollection(ORDERS_COLLECTION_NAME);
         }
 
-        Publisher<Document> findUserByName(final String name) {
+        Observable<Optional<User>> findUserByName(final String name) {
             return usersCollection
                     .find(eq("_id", name))
-                    .first();
+                    .first()
+                    .map(doc -> new User(doc))      // no null check as we don't get null objects in the stream
+                    .toList()   // conversion to List to check whether we found a user with the specified name
+                    .map(users -> users.size() == 0 ? Optional.empty() : Optional.of(users.get(0)));
         }
 
-        Publisher<Document> findOrdersByUsername(final String username) {
+        Observable<Order> findOrdersByUsername(final String username) {
             return ordersCollection
-                    .find(eq("username", username));
+                    .find(eq("username", username))
+                    .toObservable()
+                    .map(doc -> new Order(doc));
         }
     }   // end DAO
 
 
     private Observable<String> logIn(final Credentials credentials) {
-        return toObservable(dao.findUserByName(credentials.username))
-                .map(doc -> new User(doc))      // no null check as we don't get null objects in the stream
-                .toList()   // conversion to List to check whether we found a user with the specified name
-                .map(users -> (Optional<User>)(users.size() == 0 ? Optional.empty() : Optional.of(users.get(0))))
+        return dao.findUserByName(credentials.username)
                 .map(optUser -> checkUserLoggedIn(optUser, credentials))
                 .map(user -> user.name);
     }
 
     private Observable<Result> processOrdersOf(final String username) {
-        return toObservable(dao.findOrdersByUsername(username))
-                .map(doc -> new Order(doc))
-                .toList()
-                .map(orders -> new Result(username, orders));
+        return dao.findOrdersByUsername(username)
+                .map(order -> new IntPair(order.amount, 1))
+                .reduce((p1, p2) -> new IntPair(p1.first + p2.first, p1.second + p2.second))
+                .map(p -> new Result(username, p.second, p.first, average(p.first, p.second)));
     }
 
     private void eCommerceStatistics(final Credentials credentials) throws Exception {
@@ -79,16 +79,28 @@ public class QueryJ08RxStreamsWithObservables {
 
         logIn(credentials)
                 .flatMap(username -> processOrdersOf(username))
-                .subscribe(
-                        result -> result.display(),
-                        t -> { System.err.println(t.toString()); latch.countDown(); },
-                        () -> latch.countDown()
-                );
+                .subscribe(new Observer<Result>() {
+                    @Override
+                    public void onNext(Result result) {
+                        result.display();
+                    }
+
+                    @Override
+                    public void onError(Throwable t) {
+                        System.err.println(t.toString());
+                        latch.countDown();
+                    }
+
+                    @Override
+                    public void onCompleted() {
+                        latch.countDown();
+                    }
+                });
 
         latch.await();
     }
 
-    private QueryJ08RxStreamsWithObservables() throws Exception {
+    private QueryJ07bRxObservables() throws Exception {
 
         eCommerceStatistics(new Credentials(LISA, "password"));
         sleep(2000L);

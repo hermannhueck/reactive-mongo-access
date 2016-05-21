@@ -45,7 +45,7 @@ public class QueryJ05Callback {
         void findUserByName(final String name, SingleResultCallback<Optional<User>> callback) {
             usersCollection
                     .find(eq("_id", name))
-                    .map(doc -> (Optional<User>)(doc == null ? Optional.empty() : Optional.of(new User(doc))))
+                    .map(doc -> Optional.ofNullable(doc).map(User::new))
                     .first(callback);
         }
 
@@ -66,7 +66,7 @@ public class QueryJ05Callback {
         dao.findOrdersByUsername(username, callback);
     }
 
-    private void eCommercStatistics(final Credentials credentials) throws Exception {
+    private void eCommerceStatistics(final Credentials credentials) throws Exception {
 
         System.out.println("--- Calculating eCommerce statistings of user \"" + credentials.username + "\" ...");
 
@@ -104,10 +104,10 @@ public class QueryJ05Callback {
 
     private QueryJ05Callback() throws Exception {
 
-        eCommercStatistics(new Credentials(LISA, "password"));
+        eCommerceStatistics(new Credentials(LISA, "password"));
         sleep(2000L);
-        eCommercStatistics(new Credentials(LISA, "bad_password"));
+        eCommerceStatistics(new Credentials(LISA, "bad_password"));
         sleep(2000L);
-        eCommercStatistics(new Credentials(LISA.toUpperCase(), "password"));
+        eCommerceStatistics(new Credentials(LISA.toUpperCase(), "password"));
     }
 }
