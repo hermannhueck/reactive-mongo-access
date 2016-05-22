@@ -4,10 +4,10 @@ import java.util.concurrent.CountDownLatch
 
 import org.mongodb.scala._
 import org.mongodb.scala.model.Filters
+import rx.lang.{scala => rx}
 import shopScala.util.Constants._
 import shopScala.util.Util._
 import shopScala.util._
-import rx.lang.{scala => rx}
 import shopScala.util.conversion.RxScalaConversions
 
 /*
@@ -18,6 +18,8 @@ import shopScala.util.conversion.RxScalaConversions
 
 object QueryS07RxObservables extends App {
 
+  type MongoObservable[T] = org.mongodb.scala.Observable[T]
+
   object dao {
 
     val client: MongoClient = MongoClient()
@@ -25,22 +27,28 @@ object QueryS07RxObservables extends App {
     val usersCollection: MongoCollection[Document] = db.getCollection(USERS_COLLECTION_NAME)
     val ordersCollection: MongoCollection[Document] = db.getCollection(ORDERS_COLLECTION_NAME)
 
-    def findUserByName(name: String): rx.Observable[Option[User]] = {
-      val obs: Observable[Option[User]] = usersCollection
+    private def _findUserByName(name: String): MongoObservable[Option[User]] = {
+      usersCollection
         .find(Filters.eq("_id", name))
         .first()
         .map(doc => User(doc))
         .collect()
         .map(seq => seq.headOption)
-      RxScalaConversions.observableToRxObservable(obs)
     }
 
-    def findOrdersByUsername(username: String): rx.Observable[Seq[Order]] = {
-      val obs: Observable[Seq[Order]] = ordersCollection
+    private def _findOrdersByUsername(username: String): MongoObservable[Seq[Order]] = {
+      ordersCollection
         .find(Filters.eq("username", username))
         .map(doc => Order(doc))
         .collect()
-      RxScalaConversions.observableToRxObservable(obs)
+    }
+
+    def findUserByName(name: String): rx.Observable[Option[User]] = {
+      RxScalaConversions.observableToRxObservable(_findUserByName(name))
+    }
+
+    def findOrdersByUsername(username: String): rx.Observable[Seq[Order]] = {
+      RxScalaConversions.observableToRxObservable(_findOrdersByUsername(username))
     }
   }   // end dao
 
@@ -74,7 +82,7 @@ object QueryS07RxObservables extends App {
 
   eCommerceStatistics(Credentials(LISA, "password"))
   Thread sleep 2000L
-  eCommerceStatistics(Credentials(LISA, "bad password"))
+  eCommerceStatistics(Credentials(LISA, "bad_password"))
   Thread sleep 2000L
   eCommerceStatistics(Credentials(LISA.toUpperCase, "password"))
 }

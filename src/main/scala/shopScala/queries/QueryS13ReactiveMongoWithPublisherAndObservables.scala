@@ -39,8 +39,8 @@ object QueryS13ReactiveMongoWithPublisherAndObservables extends App {
       connection.actorSystem.terminate()
     }
 
-    def findUserByName(name: String): Publisher[_ <: Option[User]] = {
-      val future: Future[Option[User]] = usersCollection
+    private def _findUserByName(name: String): Future[Option[User]] = {
+      usersCollection
         .find(BSONDocument("_id" -> name))
         .one[BSONDocument]
         .map { optDoc =>
@@ -48,11 +48,10 @@ object QueryS13ReactiveMongoWithPublisherAndObservables extends App {
             User(doc)
           }
         }
-      FutureToRxStreamsConversion.futureToPublisher(future)
     }
 
-    def findOrdersByUsername(username: String): Publisher[_ <: Seq[Order]] = {
-      val future: Future[Seq[Order]] = ordersCollection
+    private def _findOrdersByUsername(username: String): Future[Seq[Order]] = {
+      ordersCollection
         .find(BSONDocument("username" -> username))
         .cursor[BSONDocument]()
         .collect[Seq]()
@@ -61,7 +60,14 @@ object QueryS13ReactiveMongoWithPublisherAndObservables extends App {
             Order(doc)
           }
         }
-      FutureToRxStreamsConversion.futureToPublisher(future)
+    }
+
+    def findUserByName(name: String): Publisher[_ <: Option[User]] = {
+      FutureToRxStreamsConversion.futureToPublisher(_findUserByName(name))
+    }
+
+    def findOrdersByUsername(username: String): Publisher[_ <: Seq[Order]] = {
+      FutureToRxStreamsConversion.futureToPublisher(_findOrdersByUsername(username))
     }
   }   // end dao
 
@@ -112,7 +118,7 @@ object QueryS13ReactiveMongoWithPublisherAndObservables extends App {
 
   eCommerceStatistics(Credentials(LISA, "password"))
   Thread sleep 2000L
-  eCommerceStatistics(Credentials(LISA, "bad password"))
+  eCommerceStatistics(Credentials(LISA, "bad_password"))
   Thread sleep 2000L
   eCommerceStatistics(Credentials(LISA.toUpperCase, "password"), isLastInvocation = true)
 }

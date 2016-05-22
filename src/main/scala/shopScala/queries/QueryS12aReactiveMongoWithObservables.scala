@@ -22,7 +22,7 @@ import scala.concurrent.{Await, Future}
       https://github.com/sgodbillon/reactivemongo-demo-app
  */
 
-object QueryS12ReactiveMongoWithObservables extends App {
+object QueryS12aReactiveMongoWithObservables extends App {
 
   object dao {
 
@@ -38,8 +38,8 @@ object QueryS12ReactiveMongoWithObservables extends App {
       connection.actorSystem.terminate()
     }
 
-    def findUserByName(name: String): rx.Observable[Option[User]] = {
-      val future: Future[Option[User]] = usersCollection
+    private def _findUserByName(name: String): Future[Option[User]] = {
+      usersCollection
         .find(BSONDocument("_id" -> name))
         .one[BSONDocument]
         .map { optDoc =>
@@ -47,11 +47,10 @@ object QueryS12ReactiveMongoWithObservables extends App {
             User(doc)
           }
         }
-      rx.Observable.from(future)
     }
 
-    def findOrdersByUsername(username: String): rx.Observable[Seq[Order]] = {
-      val future: Future[Seq[Order]] = ordersCollection
+    private def _findOrdersByUsername(username: String): Future[Seq[Order]] = {
+      ordersCollection
         .find(BSONDocument("username" -> username))
         .cursor[BSONDocument]()
         .collect[Seq]()
@@ -60,7 +59,14 @@ object QueryS12ReactiveMongoWithObservables extends App {
             Order(doc)
           }
         }
-      rx.Observable.from(future)
+    }
+
+    def findUserByName(name: String): rx.Observable[Option[User]] = {
+      rx.Observable.from(_findUserByName(name))
+    }
+
+    def findOrdersByUsername(username: String): rx.Observable[Seq[Order]] = {
+      rx.Observable.from(_findOrdersByUsername(username))
     }
   }   // end dao
 
@@ -71,7 +77,7 @@ object QueryS12ReactiveMongoWithObservables extends App {
       .map(user => user.name)
   }
 
-  private def processOrdersOf(username: String): rx.Observable[Result] = {
+  def processOrdersOf(username: String): rx.Observable[Result] = {
     dao.findOrdersByUsername(username)
       .map(orders => new Result(username, orders))
   }
@@ -106,7 +112,7 @@ object QueryS12ReactiveMongoWithObservables extends App {
 
   eCommerceStatistics(Credentials(LISA, "password"))
   Thread sleep 2000L
-  eCommerceStatistics(Credentials(LISA, "bad password"))
+  eCommerceStatistics(Credentials(LISA, "bad_password"))
   Thread sleep 2000L
   eCommerceStatistics(Credentials(LISA.toUpperCase, "password"), isLastInvocation = true)
 }

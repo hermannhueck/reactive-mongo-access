@@ -2,10 +2,10 @@ package shopScala.queries
 
 import java.util.concurrent.CountDownLatch
 
-import akka.{Done, NotUsed}
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
+import akka.{Done, NotUsed}
 import org.mongodb.scala._
 import org.mongodb.scala.model.Filters
 import org.reactivestreams.Publisher
@@ -14,9 +14,9 @@ import shopScala.util.Util._
 import shopScala.util._
 import shopScala.util.conversion.RxStreamsConversions
 
-import scala.util.{Failure, Success}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import scala.util.{Failure, Success}
 
 /*
     For conversions from MongoDBObservable to RxStreams Publisher see:
@@ -26,6 +26,8 @@ import scala.concurrent.Future
 
 object QueryS09RxStreamsWithAkkaStreams extends App {
 
+  type MongoObservable[T] = org.mongodb.scala.Observable[T]
+
   object dao {
 
     val client: MongoClient = MongoClient()
@@ -33,22 +35,28 @@ object QueryS09RxStreamsWithAkkaStreams extends App {
     val usersCollection: MongoCollection[Document] = db.getCollection(USERS_COLLECTION_NAME)
     val ordersCollection: MongoCollection[Document] = db.getCollection(ORDERS_COLLECTION_NAME)
 
-    def findUserByName(name: String): Publisher[Option[User]] = {
-      val obs: org.mongodb.scala.Observable[Option[User]] = usersCollection
+    private def _findUserByName(name: String): MongoObservable[Option[User]] = {
+      usersCollection
         .find(Filters.eq("_id", name))
         .first()
         .map(doc => User(doc))
         .collect()
         .map(seq => seq.headOption)
-      RxStreamsConversions.observableToPublisher(obs)
     }
 
-    def findOrdersByUsername(username: String): Publisher[Seq[Order]] = {
-      val obs: org.mongodb.scala.Observable[Seq[Order]] = ordersCollection
+    private def _findOrdersByUsername(username: String): MongoObservable[Seq[Order]] = {
+      ordersCollection
         .find(Filters.eq("username", username))
         .map(doc => Order(doc))
         .collect()
-      RxStreamsConversions.observableToPublisher(obs)
+    }
+
+    def findUserByName(name: String): Publisher[Option[User]] = {
+      RxStreamsConversions.observableToPublisher(_findUserByName(name))
+    }
+
+    def findOrdersByUsername(username: String): Publisher[Seq[Order]] = {
+      RxStreamsConversions.observableToPublisher(_findOrdersByUsername(username))
     }
   }   // end dao
 
@@ -95,7 +103,7 @@ object QueryS09RxStreamsWithAkkaStreams extends App {
 
   eCommerceStatistics(Credentials(LISA, "password"))
   Thread sleep 2000L
-  eCommerceStatistics(Credentials(LISA, "bad password"))
+  eCommerceStatistics(Credentials(LISA, "bad_password"))
   Thread sleep 2000L
   eCommerceStatistics(Credentials(LISA.toUpperCase, "password"), isLastInvocation = true)
 }

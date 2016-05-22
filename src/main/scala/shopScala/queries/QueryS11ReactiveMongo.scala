@@ -5,7 +5,6 @@ import java.util.concurrent.CountDownLatch
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.api.{DefaultDB, MongoConnection, MongoDriver}
 import reactivemongo.bson.BSONDocument
-import rx.lang.{scala => rx}
 import shopScala.util.Constants._
 import shopScala.util.Util._
 import shopScala.util._
@@ -39,7 +38,7 @@ object QueryS11ReactiveMongo extends App {
       connection.actorSystem.terminate()
     }
 
-    def findUserByName(name: String): Future[Option[User]] = {
+    private def _findUserByName(name: String): Future[Option[User]] = {
       usersCollection
         .find(BSONDocument("_id" -> name))
         .one[BSONDocument]
@@ -50,7 +49,7 @@ object QueryS11ReactiveMongo extends App {
         }
     }
 
-    def findOrdersByUsername(username: String): Future[Seq[Order]] = {
+    private def _findOrdersByUsername(username: String): Future[Seq[Order]] = {
       ordersCollection
         .find(BSONDocument("username" -> username))
         .cursor[BSONDocument]()
@@ -61,6 +60,14 @@ object QueryS11ReactiveMongo extends App {
           }
         }
     }
+
+    def findUserByName(name: String): Future[Option[User]] = {
+      _findUserByName(name)
+    }
+
+    def findOrdersByUsername(username: String): Future[Seq[Order]] = {
+      _findOrdersByUsername(username)
+    }
   }   // end dao
 
 
@@ -70,7 +77,7 @@ object QueryS11ReactiveMongo extends App {
       .map(user => user.name)
   }
 
-  private def processOrdersOf(username: String): Future[Result] = {
+  def processOrdersOf(username: String): Future[Result] = {
     dao.findOrdersByUsername(username)
       .map(orders => new Result(username, orders))
   }
@@ -101,7 +108,7 @@ object QueryS11ReactiveMongo extends App {
 
   eCommerceStatistics(Credentials(LISA, "password"))
   Thread sleep 2000L
-  eCommerceStatistics(Credentials(LISA, "bad password"))
+  eCommerceStatistics(Credentials(LISA, "bad_password"))
   Thread sleep 2000L
   eCommerceStatistics(Credentials(LISA.toUpperCase, "password"), isLastInvocation = true)
 }

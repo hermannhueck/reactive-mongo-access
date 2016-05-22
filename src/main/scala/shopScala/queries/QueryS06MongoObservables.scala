@@ -8,7 +8,10 @@ import shopScala.util.Constants._
 import shopScala.util.Util._
 import shopScala.util._
 
+
 object QueryS06MongoObservables extends App {
+
+  type MongoObservable[T] = org.mongodb.scala.Observable[T]
 
   object dao {
 
@@ -17,7 +20,7 @@ object QueryS06MongoObservables extends App {
     val usersCollection: MongoCollection[Document] = db.getCollection(USERS_COLLECTION_NAME)
     val ordersCollection: MongoCollection[Document] = db.getCollection(ORDERS_COLLECTION_NAME)
 
-    def findUserByName(name: String): Observable[Option[User]] = {
+    private def _findUserByName(name: String): MongoObservable[Option[User]] = {
       usersCollection
         .find(Filters.eq("_id", name))
         .first()
@@ -26,11 +29,19 @@ object QueryS06MongoObservables extends App {
         .map(seq => seq.headOption)
     }
 
-    def findOrdersByUsername(username: String): Observable[Seq[Order]] = {
+    private def _findOrdersByUsername(username: String): MongoObservable[Seq[Order]] = {
       ordersCollection
         .find(Filters.eq("username", username))
         .map(doc => Order(doc))
         .collect()
+    }
+
+    def findUserByName(name: String): Observable[Option[User]] = {
+      _findUserByName(name)
+    }
+
+    def findOrdersByUsername(username: String): Observable[Seq[Order]] = {
+      _findOrdersByUsername(username)
     }
   }   // end dao
 

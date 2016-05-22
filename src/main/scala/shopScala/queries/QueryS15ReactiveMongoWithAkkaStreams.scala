@@ -6,7 +6,6 @@ import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
-import org.reactivestreams.Publisher
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.api.{DefaultDB, MongoConnection, MongoDriver}
 import reactivemongo.bson.BSONDocument
@@ -43,8 +42,8 @@ object QueryS15ReactiveMongoWithAkkaStreams extends App {
       connection.actorSystem.terminate()
     }
 
-    def findUserByName(name: String): Source[Option[User], NotUsed] = {
-      val future: Future[Option[User]] = usersCollection
+    private def _findUserByName(name: String): Future[Option[User]] = {
+      usersCollection
         .find(BSONDocument("_id" -> name))
         .one[BSONDocument]
         .map { optDoc =>
@@ -52,11 +51,10 @@ object QueryS15ReactiveMongoWithAkkaStreams extends App {
             User(doc)
           }
         }
-      Source.fromFuture(future)
     }
 
-    def findOrdersByUsername(username: String): Source[Seq[Order], NotUsed] = {
-      val future: Future[Seq[Order]] = ordersCollection
+    private def _findOrdersByUsername(username: String): Future[Seq[Order]] = {
+      ordersCollection
         .find(BSONDocument("username" -> username))
         .cursor[BSONDocument]()
         .collect[Seq]()
@@ -65,7 +63,14 @@ object QueryS15ReactiveMongoWithAkkaStreams extends App {
             Order(doc)
           }
         }
-      Source.fromFuture(future)
+    }
+
+    def findUserByName(name: String): Source[Option[User], NotUsed] = {
+      Source.fromFuture(_findUserByName(name))
+    }
+
+    def findOrdersByUsername(username: String): Source[Seq[Order], NotUsed] = {
+      Source.fromFuture(_findOrdersByUsername(username))
     }
   }   // end dao
 
@@ -115,7 +120,7 @@ object QueryS15ReactiveMongoWithAkkaStreams extends App {
 
   eCommerceStatistics(Credentials(LISA, "password"))
   Thread sleep 2000L
-  eCommerceStatistics(Credentials(LISA, "bad password"))
+  eCommerceStatistics(Credentials(LISA, "bad_password"))
   Thread sleep 2000L
   eCommerceStatistics(Credentials(LISA.toUpperCase, "password"), isLastInvocation = true)
 }
