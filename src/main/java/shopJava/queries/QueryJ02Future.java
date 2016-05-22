@@ -12,6 +12,7 @@ import shopJava.model.User;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -46,24 +47,30 @@ public class QueryJ02Future {
             this.ordersCollection = db.getCollection(ORDERS_COLLECTION_NAME);
         }
 
+        private Optional<User> _findUserByName(final String name) {
+            final Document doc = usersCollection
+                    .find(eq("_id", name))
+                    .first();
+            return Optional.ofNullable(doc).map(User::new);
+        }
+
+        private List<Order> _findOrdersByUsername(final String username) {
+            final List<Document> docs = ordersCollection
+                    .find(eq("username", username))
+                    .into(new ArrayList<>());
+            return docs.stream()
+                    .map(doc -> new Order(doc))
+                    .collect(toList());
+        }
+
         Future<Optional<User>> findUserByName(final String name) {
-            return executor.submit(() -> {
-                final Document doc = usersCollection
-                        .find(eq("_id", name))
-                        .first();
-                return Optional.ofNullable(doc).map(User::new);
-            });
+            Callable<Optional<User>> callable = () -> _findUserByName(name);
+            return executor.submit(callable);
         }
 
         Future<List<Order>> findOrdersByUsername(final String username) {
-            return executor.submit(() -> {
-                final List<Document> docs = ordersCollection
-                        .find(eq("username", username))
-                        .into(new ArrayList<>());
-                return docs.stream()
-                        .map(doc -> new Order(doc))
-                        .collect(toList());
-            });
+            Callable<List<Order>> callable = () -> _findOrdersByUsername(username);
+            return executor.submit(callable);
         }
     }   // end DAO
 

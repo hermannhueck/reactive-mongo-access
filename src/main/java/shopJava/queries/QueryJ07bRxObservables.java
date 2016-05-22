@@ -6,8 +6,10 @@ import com.mongodb.rx.client.MongoCollection;
 import com.mongodb.rx.client.MongoDatabase;
 import org.bson.Document;
 import rx.Observable;
-import rx.Observer;
-import shopJava.model.*;
+import shopJava.model.Credentials;
+import shopJava.model.Order;
+import shopJava.model.Result;
+import shopJava.model.User;
 
 import java.util.List;
 import java.util.Optional;
@@ -16,7 +18,6 @@ import java.util.concurrent.CountDownLatch;
 import static com.mongodb.client.model.Filters.eq;
 import static java.lang.Thread.sleep;
 import static shopJava.util.Constants.*;
-import static shopJava.util.Util.average;
 import static shopJava.util.Util.checkUserLoggedIn;
 
 @SuppressWarnings("Convert2MethodRef")
@@ -40,7 +41,7 @@ public class QueryJ07bRxObservables {
             this.ordersCollection = db.getCollection(ORDERS_COLLECTION_NAME);
         }
 
-        Observable<Optional<User>> findUserByName(final String name) {
+        private Observable<Optional<User>> _findUserByName(final String name) {
             return usersCollection
                     .find(eq("_id", name))
                     .first()
@@ -49,11 +50,19 @@ public class QueryJ07bRxObservables {
                     .map(users -> users.size() == 0 ? Optional.empty() : Optional.of(users.get(0)));
         }
 
-        Observable<Order> findOrdersByUsername(final String username) {
+        private Observable<Order> _findOrdersByUsername(final String username) {
             return ordersCollection
                     .find(eq("username", username))
                     .toObservable()
                     .map(doc -> new Order(doc));
+        }
+
+        Observable<Optional<User>> findUserByName(final String name) {
+            return _findUserByName(name);
+        }
+
+        Observable<List<Order>> findOrdersByUsername(final String username) {
+            return _findOrdersByUsername(username).toList();
         }
     }   // end DAO
 
@@ -66,9 +75,7 @@ public class QueryJ07bRxObservables {
 
     private Observable<Result> processOrdersOf(final String username) {
         return dao.findOrdersByUsername(username)
-                .map(order -> new IntPair(order.amount, 1))
-                .reduce((p1, p2) -> new IntPair(p1.first + p2.first, p1.second + p2.second))
-                .map(p -> new Result(username, p.second, p.first, average(p.first, p.second)));
+                .map(orders -> new Result(username, orders));
     }
 
     private void eCommerceStatistics(final Credentials credentials) throws Exception {
@@ -79,23 +86,11 @@ public class QueryJ07bRxObservables {
 
         logIn(credentials)
                 .flatMap(username -> processOrdersOf(username))
-                .subscribe(new Observer<Result>() {
-                    @Override
-                    public void onNext(Result result) {
-                        result.display();
-                    }
-
-                    @Override
-                    public void onError(Throwable t) {
-                        System.err.println(t.toString());
-                        latch.countDown();
-                    }
-
-                    @Override
-                    public void onCompleted() {
-                        latch.countDown();
-                    }
-                });
+                .subscribe(
+                        result -> result.display(),
+                        t -> { System.err.println(t.toString()); latch.countDown(); },
+                        () -> latch.countDown()
+                );
 
         latch.await();
     }

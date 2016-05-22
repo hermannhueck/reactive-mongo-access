@@ -40,21 +40,28 @@ public class QueryJ01Blocking {
             this.ordersCollection = db.getCollection(ORDERS_COLLECTION_NAME);
         }
 
-        Optional<User> findUserByName(final String name) {
+        private Optional<User> _findUserByName(final String name) {
             final Document doc = usersCollection
-                    .find(eq("_id", name)).first();
-            // either: return doc == null ?
-            //              Optional.empty() : Optional.of(new User(doc)); ... or better:
+                    .find(eq("_id", name))
+                    .first();
             return Optional.ofNullable(doc).map(User::new);
         }
 
-        List<Order> findOrdersByUsername(final String username) {
+        private List<Order> _findOrdersByUsername(final String username) {
             final List<Document> docs = ordersCollection
                     .find(eq("username", username))
                     .into(new ArrayList<>());
             return docs.stream()
                     .map(doc -> new Order(doc))
                     .collect(toList());
+        }
+
+        Optional<User> findUserByName(final String name) {
+            return _findUserByName(name);
+        }
+
+        List<Order> findOrdersByUsername(final String username) {
+            return _findOrdersByUsername(username);
         }
     }   // end DAO
 

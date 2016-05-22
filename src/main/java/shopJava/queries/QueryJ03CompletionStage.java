@@ -4,15 +4,17 @@ import com.mongodb.MongoClient;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import org.bson.Document;
-import shopJava.model.Order;
-import shopJava.model.User;
 import shopJava.model.Credentials;
+import shopJava.model.Order;
 import shopJava.model.Result;
+import shopJava.model.User;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+import java.util.function.Supplier;
 
 import static com.mongodb.client.model.Filters.eq;
 import static java.lang.Thread.sleep;
@@ -41,24 +43,30 @@ public class QueryJ03CompletionStage {
             this.ordersCollection = db.getCollection(ORDERS_COLLECTION_NAME);
         }
 
+        private Optional<User> _findUserByName(final String name) {
+            final Document doc = usersCollection
+                    .find(eq("_id", name))
+                    .first();
+            return Optional.ofNullable(doc).map(User::new);
+        }
+
+        private List<Order> _findOrdersByUsername(final String username) {
+            final List<Document> docs = ordersCollection
+                    .find(eq("username", username))
+                    .into(new ArrayList<>());
+            return docs.stream()
+                    .map(doc -> new Order(doc))
+                    .collect(toList());
+        }
+
         CompletionStage<Optional<User>> findUserByName(final String name) {
-            return CompletableFuture.supplyAsync(() -> {
-                Document doc = usersCollection
-                        .find(eq("_id", name))
-                        .first();
-                return Optional.ofNullable(doc).map(User::new);
-            });
+            Supplier<Optional<User>> supplier = () -> _findUserByName(name);
+            return CompletableFuture.supplyAsync(supplier);
         }
 
         CompletionStage<List<Order>> findOrdersByUsername(final String username) {
-            return CompletableFuture.supplyAsync(() -> {
-                List<Document> docs = ordersCollection
-                        .find(eq("username", username))
-                        .into(new ArrayList<>());
-                return docs.stream()
-                        .map(doc -> new Order(doc))
-                        .collect(toList());
-            });
+            Supplier<List<Order>> supplier = () -> _findOrdersByUsername(username);
+            return CompletableFuture.supplyAsync(supplier);
         }
     }   // end DAO
 

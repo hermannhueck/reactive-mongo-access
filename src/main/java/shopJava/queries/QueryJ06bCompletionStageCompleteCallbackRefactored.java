@@ -42,6 +42,38 @@ public class QueryJ06bCompletionStageCompleteCallbackRefactored {
             this.ordersCollection = db.getCollection(ORDERS_COLLECTION_NAME);
         }
 
+        private void _findUserByName(final String name, SingleResultCallback<Optional<User>> callback) {
+            usersCollection
+                    .find(eq("_id", name))
+                    .map(doc -> Optional.ofNullable(doc).map(User::new))
+                    .first(callback);
+        }
+
+        private void _findOrdersByUsername(final String username, final SingleResultCallback<List<Order>> callback) {
+            ordersCollection
+                    .find(eq("username", username))
+                    .map(doc -> new Order(doc))
+                    .into(new ArrayList<>(), callback);
+        }
+
+        CompletionStage<Optional<User>> findUserByName(final String name) {
+
+            final CompletableFuture<Optional<User>> future = new CompletableFuture<>();
+
+            _findUserByName(name, callbackToCompleteFuture(future));
+
+            return future;
+        }
+
+        CompletionStage<List<Order>> findOrdersByUsername(final String username) {
+
+            final CompletableFuture<List<Order>> future = new CompletableFuture<>();
+
+            _findOrdersByUsername(username, callbackToCompleteFuture(future));
+
+            return future;
+        }
+
         private <T> SingleResultCallback<T> callbackToCompleteFuture(final CompletableFuture<T> future) {
             return (result, t) -> {
                 if (t == null) {
@@ -51,30 +83,6 @@ public class QueryJ06bCompletionStageCompleteCallbackRefactored {
                 }
             };
         }
-
-        CompletionStage<Optional<User>> findUserByName(final String name) {
-
-            final CompletableFuture<Optional<User>> future = new CompletableFuture<>();
-
-            usersCollection
-                    .find(eq("_id", name))
-                    .map(doc -> Optional.ofNullable(doc).map(User::new))
-                    .first(callbackToCompleteFuture(future));
-
-            return future;
-        }
-
-        CompletionStage<List<Order>> findOrdersByUsername(final String username) {
-
-            final CompletableFuture<List<Order>> future = new CompletableFuture<>();
-
-            ordersCollection
-                    .find(eq("username", username))
-                    .map(doc -> new Order(doc))
-                    .into(new ArrayList<>(), callbackToCompleteFuture(future));
-
-            return future;
-        }
     }   // end DAO
 
 
@@ -82,7 +90,6 @@ public class QueryJ06bCompletionStageCompleteCallbackRefactored {
         return dao.findUserByName(credentials.username)
                 .thenApply(optUser -> checkUserLoggedIn(optUser, credentials))
                 .thenApply(user -> user.name);
-
     }
 
     private CompletionStage<Result> processOrdersOf(final String username) {

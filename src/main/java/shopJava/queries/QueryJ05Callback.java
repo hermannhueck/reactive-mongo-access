@@ -42,18 +42,26 @@ public class QueryJ05Callback {
             this.ordersCollection = db.getCollection(ORDERS_COLLECTION_NAME);
         }
 
-        void findUserByName(final String name, SingleResultCallback<Optional<User>> callback) {
+        private void _findUserByName(final String name, SingleResultCallback<Optional<User>> callback) {
             usersCollection
                     .find(eq("_id", name))
                     .map(doc -> Optional.ofNullable(doc).map(User::new))
                     .first(callback);
         }
 
-        void findOrdersByUsername(final String username, final SingleResultCallback<List<Order>> callback) {
+        private void _findOrdersByUsername(final String username, final SingleResultCallback<List<Order>> callback) {
             ordersCollection
                     .find(eq("username", username))
                     .map(doc -> new Order(doc))
                     .into(new ArrayList<>(), callback);
+        }
+
+        void findUserByName(final String name, SingleResultCallback<Optional<User>> callback) {
+            _findUserByName(name, callback);
+        }
+
+        void findOrdersByUsername(final String username, final SingleResultCallback<List<Order>> callback) {
+            _findOrdersByUsername(username, callback);
         }
     }   // end DAO
 

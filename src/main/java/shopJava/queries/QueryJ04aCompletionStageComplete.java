@@ -4,10 +4,10 @@ import com.mongodb.MongoClient;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import org.bson.Document;
-import shopJava.model.Order;
-import shopJava.model.User;
 import shopJava.model.Credentials;
+import shopJava.model.Order;
 import shopJava.model.Result;
+import shopJava.model.User;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -47,15 +47,29 @@ public class QueryJ04aCompletionStageComplete {
             this.ordersCollection = db.getCollection(ORDERS_COLLECTION_NAME);
         }
 
+        private Optional<User> _findUserByName(final String name) {
+            final Document doc = usersCollection
+                    .find(eq("_id", name))
+                    .first();
+            return Optional.ofNullable(doc).map(User::new);
+        }
+
+        private List<Order> _findOrdersByUsername(final String username) {
+            final List<Document> docs = ordersCollection
+                    .find(eq("username", username))
+                    .into(new ArrayList<>());
+            return docs.stream()
+                    .map(doc -> new Order(doc))
+                    .collect(toList());
+        }
+
         CompletionStage<Optional<User>> findUserByName(final String name) {
 
             final CompletableFuture<Optional<User>> future = new CompletableFuture<>();
 
             final Runnable runnable = () -> {
                 try {
-                    Document doc = usersCollection.find(eq("_id", name)).first();
-                    Optional<User> optUser = Optional.ofNullable(doc).map(User::new);
-                    future.complete(optUser);
+                    future.complete(_findUserByName(name));
                 } catch (Exception e) {
                     future.completeExceptionally(e);
                 }
@@ -72,13 +86,7 @@ public class QueryJ04aCompletionStageComplete {
 
             final Runnable runnable = () -> {
                 try {
-                    List<Document> docs = ordersCollection.
-                            find(eq("username", username))
-                            .into(new ArrayList<>());
-                    List<Order> orders = docs.stream()
-                            .map(doc -> new Order(doc))
-                            .collect(toList());
-                    future.complete(orders);
+                    future.complete(_findOrdersByUsername(username));
                 } catch (Exception e) {
                     future.completeExceptionally(e);
                 }

@@ -42,22 +42,31 @@ public class QueryJ06aCompletionStageCompleteCallback {
             this.ordersCollection = db.getCollection(ORDERS_COLLECTION_NAME);
         }
 
+        private void _findUserByName(final String name, SingleResultCallback<Optional<User>> callback) {
+            usersCollection
+                    .find(eq("_id", name))
+                    .map(doc -> Optional.ofNullable(doc).map(User::new))
+                    .first(callback);
+        }
+
+        private void _findOrdersByUsername(final String username, final SingleResultCallback<List<Order>> callback) {
+            ordersCollection
+                    .find(eq("username", username))
+                    .map(doc -> new Order(doc))
+                    .into(new ArrayList<>(), callback);
+        }
+
         CompletionStage<Optional<User>> findUserByName(final String name) {
 
             final CompletableFuture<Optional<User>> future = new CompletableFuture<>();
 
-            final SingleResultCallback<Optional<User>> callback = (user, t) -> {
+            _findUserByName(name, (user, t) -> {
                 if (t == null) {
                     future.complete(user);
                 } else {
                     future.completeExceptionally(t);
                 }
-            };
-
-            usersCollection
-                    .find(eq("_id", name))
-                    .map(doc -> Optional.ofNullable(doc).map(User::new))
-                    .first(callback);
+            });
 
             return future;
         }
@@ -66,18 +75,13 @@ public class QueryJ06aCompletionStageCompleteCallback {
 
             final CompletableFuture<List<Order>> future = new CompletableFuture<>();
 
-            final SingleResultCallback<List<Order>> callback = (orders, t) -> {
+            _findOrdersByUsername(username, (orders, t) -> {
                 if (t == null) {
                     future.complete(orders);
                 } else {
                     future.completeExceptionally(t);
                 }
-            };
-
-            ordersCollection
-                    .find(eq("username", username))
-                    .map(doc -> new Order(doc))
-                    .into(new ArrayList<>(), callback);
+            });
 
             return future;
         }

@@ -1,5 +1,6 @@
 package shopJava.queries;
 
+import akka.Done;
 import akka.NotUsed;
 import akka.actor.ActorSystem;
 import akka.stream.ActorMaterializer;
@@ -11,13 +12,14 @@ import com.mongodb.rx.client.MongoDatabase;
 import org.bson.Document;
 import org.reactivestreams.Publisher;
 import rx.Observable;
-import shopJava.model.Order;
-import shopJava.model.User;
 import shopJava.model.Credentials;
+import shopJava.model.Order;
 import shopJava.model.Result;
+import shopJava.model.User;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.CountDownLatch;
 
 import static com.mongodb.client.model.Filters.eq;
@@ -47,23 +49,28 @@ public class QueryJ10RxStreamsWithAkkaStreams {
             this.ordersCollection = db.getCollection(ORDERS_COLLECTION_NAME);
         }
 
-        Publisher<Optional<User>> findUserByName(final String name) {
-            Observable<Optional<User>> observable = usersCollection
+        private Observable<Optional<User>> _findUserByName(final String name) {
+            return usersCollection
                     .find(eq("_id", name))
                     .first()
                     .map(doc -> new User(doc))      // no null check as we don't get null objects in the stream
                     .toList()   // conversion to List to check whether we found a user with the specified name
                     .map(users -> users.size() == 0 ? Optional.empty() : Optional.of(users.get(0)));
-            return toPublisher(observable);
+        }
+
+        private Observable<Order> _findOrdersByUsername(final String username) {
+            return ordersCollection
+                    .find(eq("username", username))
+                    .toObservable()
+                    .map(doc -> new Order(doc));
+        }
+
+        Publisher<Optional<User>> findUserByName(final String name) {
+            return toPublisher(_findUserByName(name));
         }
 
         Publisher<List<Order>> findOrdersByUsername(final String username) {
-            Observable<List<Order>> observable = ordersCollection
-                    .find(eq("username", username))
-                    .toObservable()
-                    .map(doc -> new Order(doc))
-                    .toList();
-            return toPublisher(observable);
+            return toPublisher(_findOrdersByUsername(username).toList());
         }
     }   // end DAO
 
@@ -88,18 +95,20 @@ public class QueryJ10RxStreamsWithAkkaStreams {
 
         final CountDownLatch latch = new CountDownLatch(1);
 
-        logIn(credentials)
-                .flatMapMerge(1, username -> processOrdersOf(username))
-                .runForeach(result -> result.display(), materializer)
-                .whenComplete((done, t) -> {
-                    if (t != null) {
-                        System.err.println(t.toString());
-                    }
-                    latch.countDown();
-                    if (isLastInvocation) {
-                        system.terminate();
-                    }
-                });
+        Source<Result, NotUsed> src = logIn(credentials)
+                .flatMapMerge(1, username -> processOrdersOf(username));
+
+        CompletionStage<Done> future = src.runForeach(result -> result.display(), materializer);       // print to console
+
+        future.whenComplete((done, t) -> {
+            if (t != null) {
+                System.err.println(t.toString());
+            }
+            latch.countDown();
+            if (isLastInvocation) {
+                system.terminate();
+            }
+        });
 
         latch.await();
     }

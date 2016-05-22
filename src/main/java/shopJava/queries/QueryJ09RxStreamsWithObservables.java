@@ -44,23 +44,28 @@ public class QueryJ09RxStreamsWithObservables {
             this.ordersCollection = db.getCollection(ORDERS_COLLECTION_NAME);
         }
 
-        Publisher<Optional<User>> findUserByName(final String name) {
-            Observable<Optional<User>> observable = usersCollection
+        private Observable<Optional<User>> _findUserByName(final String name) {
+            return usersCollection
                     .find(eq("_id", name))
                     .first()
                     .map(doc -> new User(doc))      // no null check as we don't get null objects in the stream
                     .toList()   // conversion to List to check whether we found a user with the specified name
                     .map(users -> users.size() == 0 ? Optional.empty() : Optional.of(users.get(0)));
-            return toPublisher(observable);
+        }
+
+        private Observable<Order> _findOrdersByUsername(final String username) {
+            return ordersCollection
+                    .find(eq("username", username))
+                    .toObservable()
+                    .map(doc -> new Order(doc));
+        }
+
+        Publisher<Optional<User>> findUserByName(final String name) {
+            return toPublisher(_findUserByName(name));
         }
 
         Publisher<List<Order>> findOrdersByUsername(final String username) {
-            Observable<List<Order>> observable = ordersCollection
-                    .find(eq("username", username))
-                    .toObservable()
-                    .map(doc -> new Order(doc))
-                    .toList();
-            return toPublisher(observable);
+            return toPublisher(_findOrdersByUsername(username).toList());
         }
     }   // end DAO
 
