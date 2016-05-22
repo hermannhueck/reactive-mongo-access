@@ -8,9 +8,11 @@ import shopScala.util.Constants._
 import shopScala.util.Util._
 import shopScala.util._
 
-import scala.collection.JavaConversions
 
-object QueryS01JavaDriverBlocking extends App {
+object QueryS01JDriverSync extends App {
+
+  type JList[T] = java.util.List[T]
+  type JArrayList[T] = java.util.ArrayList[T]
 
   object dao {
 
@@ -19,19 +21,26 @@ object QueryS01JavaDriverBlocking extends App {
     val usersCollection: MongoCollection[Document] = db.getCollection(USERS_COLLECTION_NAME)
     val ordersCollection: MongoCollection[Document] = db.getCollection(ORDERS_COLLECTION_NAME)
 
-    def findUserByName(name: String): Option[User] = {
+    private def _findUserByName(name: String): Option[User] = {
       val doc: Document = usersCollection
         .find(Filters.eq("_id", name))
         .first
-      if (doc == null) None else Some(User(doc))
+      Option(doc).map(User(_))
+    }
+
+    private def _findOrdersByUsername(username: String): Seq[Order] = {
+      val jDocs: JList[Document] = ordersCollection
+        .find(Filters.eq("username", username))
+        .into(new JArrayList[Document])
+      jListToSeq(jDocs).map(Order(_))
+    }
+
+    def findUserByName(name: String): Option[User] = {
+      _findUserByName(name)
     }
 
     def findOrdersByUsername(username: String): Seq[Order] = {
-      val docs: java.util.List[Document] = ordersCollection
-        .find(Filters.eq("username", username))
-        .into(new java.util.ArrayList[Document])
-      val seq: Seq[Document] = Seq.empty ++ JavaConversions.asScalaBuffer(docs)
-      seq.map(doc => Order(doc))
+      _findOrdersByUsername(username)
     }
   }   // end dao
 
@@ -56,15 +65,14 @@ object QueryS01JavaDriverBlocking extends App {
       result.display()
     }
     catch {
-      case e: Exception => {
-        System.err.println(e.toString)
-      }
+      case t: Throwable =>
+        Console.err.println(t.toString)
     }
   }
 
   eCommerceStatistics(Credentials(LISA, "password"))
   Thread sleep 2000L
-  eCommerceStatistics(Credentials(LISA, "bad password"))
+  eCommerceStatistics(Credentials(LISA, "bad_password"))
   Thread sleep 2000L
   eCommerceStatistics(Credentials(LISA.toUpperCase, "password"))
 }
