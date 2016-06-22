@@ -9,7 +9,7 @@ import shopScala.util.Util._
 import shopScala.util._
 
 
-object QueryS06MongoObservables extends App {
+object QueryS06SDriverMongoObservables extends App {
 
   type MongoObservable[T] = org.mongodb.scala.Observable[T]
 
@@ -36,17 +36,17 @@ object QueryS06MongoObservables extends App {
         .collect()
     }
 
-    def findUserByName(name: String): Observable[Option[User]] = {
+    def findUserByName(name: String): MongoObservable[Option[User]] = {
       _findUserByName(name)
     }
 
-    def findOrdersByUsername(username: String): Observable[Seq[Order]] = {
+    def findOrdersByUsername(username: String): MongoObservable[Seq[Order]] = {
       _findOrdersByUsername(username)
     }
   }   // end dao
 
 
-  def logIn(credentials: Credentials): Observable[String] = {
+  def logIn(credentials: Credentials): MongoObservable[String] = {
     dao.findUserByName(credentials.username)
       // the Exception thrown by checkUserLoggedIn is swallowed by the MongoObservable Implementation
       .map(optUser => checkUserLoggedIn(optUser, credentials))
@@ -56,7 +56,7 @@ object QueryS06MongoObservables extends App {
       })
   }
 
-  private def processOrdersOf(username: String): Observable[Result] = {
+  private def processOrdersOf(username: String): MongoObservable[Result] = {
     println("processOrdersOf: " + username)
     dao.findOrdersByUsername(username)
       .map(orders => new Result(username, orders))
@@ -78,14 +78,14 @@ object QueryS06MongoObservables extends App {
             result.display()
           }
 
-          override def onError(t: Throwable): Unit = {
-            println("=== onError")
-            t.printStackTrace()
+          override def onComplete(): Unit = {
+            println("=== onComplete")
             latch.countDown()
           }
 
-          override def onComplete(): Unit = {
-            println("=== onComplete")
+          override def onError(t: Throwable): Unit = {
+            println("=== onError")
+            t.printStackTrace()
             latch.countDown()
           }
         })

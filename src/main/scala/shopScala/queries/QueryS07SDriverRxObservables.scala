@@ -4,19 +4,19 @@ import java.util.concurrent.CountDownLatch
 
 import org.mongodb.scala._
 import org.mongodb.scala.model.Filters
-import org.reactivestreams.Publisher
+import rx.lang.{scala => rx}
 import shopScala.util.Constants._
 import shopScala.util.Util._
 import shopScala.util._
-import shopScala.util.conversion.RxStreamsConversions
+import shopScala.util.conversion.RxScalaConversions
 
 /*
-    For conversions from MongoDBObservable to RxStreams Publisher see:
+    For conversions from MongoDBObservable to RxScala Observable see:
     https://mongodb.github.io/mongo-scala-driver/1.1/integrations/
-    https://github.com/mongodb/mongo-scala-driver/tree/master/examples/src/test/scala/rxStreams
+    https://github.com/mongodb/mongo-scala-driver/tree/master/examples/src/test/scala/rxScala
  */
 
-object QueryS08RxStreamsWithObservables extends App {
+object QueryS07SDriverRxObservables extends App {
 
   type MongoObservable[T] = org.mongodb.scala.Observable[T]
 
@@ -43,30 +43,25 @@ object QueryS08RxStreamsWithObservables extends App {
         .collect()
     }
 
-    def findUserByName(name: String): Publisher[Option[User]] = {
-      RxStreamsConversions.observableToPublisher(_findUserByName(name))
+    def findUserByName(name: String): rx.Observable[Option[User]] = {
+      RxScalaConversions.observableToRxObservable(_findUserByName(name))
     }
 
-    def findOrdersByUsername(username: String): Publisher[Seq[Order]] = {
-      RxStreamsConversions.observableToPublisher(_findOrdersByUsername(username))
+    def findOrdersByUsername(username: String): rx.Observable[Seq[Order]] = {
+      RxScalaConversions.observableToRxObservable(_findOrdersByUsername(username))
     }
   }   // end dao
 
 
-  def logIn(credentials: Credentials): rx.lang.scala.Observable[String] = {
-    publisherToObservable(dao.findUserByName(credentials.username))
+  def logIn(credentials: Credentials): rx.Observable[String] = {
+    dao.findUserByName(credentials.username)
       .map(optUser => checkUserLoggedIn(optUser, credentials))
       .map(user => user.name)
   }
 
-  def processOrdersOf(username: String): rx.lang.scala.Observable[Result] = {
-    publisherToObservable(dao.findOrdersByUsername(username))
+  private def processOrdersOf(username: String): rx.Observable[Result] = {
+    dao.findOrdersByUsername(username)
       .map(orders => new Result(username, orders))
-  }
-
-  def publisherToObservable[T](pub: Publisher[T]): rx.lang.scala.Observable[T] = {
-    val javaObs: rx.Observable[T] = rx.RxReactiveStreams.toObservable(pub)
-    rx.lang.scala.JavaConversions.toScalaObservable(javaObs)
   }
 
   def eCommerceStatistics(credentials: Credentials): Unit = {

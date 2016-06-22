@@ -29,6 +29,12 @@ public class Streams {
         Observable<String> obsSimpsons = nonblockingIOWithStreams_GetDataFromDB();
 
         obsSimpsons.subscribe(new Observer<String>() {
+
+            @Override
+            public void onNext(String simpson) {
+                System.out.println(simpson);
+            }
+
             @Override
             public void onCompleted() {
                 System.out.println("----- DONE -----");
@@ -37,11 +43,6 @@ public class Streams {
             @Override
             public void onError(Throwable t) {
                 t.printStackTrace();
-            }
-
-            @Override
-            public void onNext(String simpson) {
-                System.out.println(simpson);
             }
         });
 

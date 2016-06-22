@@ -2,14 +2,13 @@ name := """reactive-mongo-access"""
 
 version := "1.0"
 
-scalaVersion := "2.11.7"
-
-// resolvers += Resolver.mavenLocal
+scalaVersion := "2.11.8"
 
 libraryDependencies ++= Seq(
-  "com.typesafe.akka" %% "akka-stream" % "2.4.4",
+  "com.typesafe.akka" %% "akka-stream" % "2.4.6",
   "org.reactivemongo" %% "reactivemongo" % "0.11.11",
   "org.mongodb.scala" %% "mongo-scala-driver" % "1.1.1",
+  "org.mongodb" %% "casbah" % "3.1.1",
   "org.mongodb" % "mongo-java-driver" % "3.2.2",
   "org.mongodb" % "mongodb-driver-async" % "3.2.2",
   "org.mongodb" % "mongodb-driver-rx" % "1.2.0",

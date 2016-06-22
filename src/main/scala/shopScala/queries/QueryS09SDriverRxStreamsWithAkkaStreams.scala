@@ -2,18 +2,20 @@ package shopScala.queries
 
 import java.util.concurrent.CountDownLatch
 
-import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
+import akka.{Done, NotUsed}
 import org.mongodb.scala._
 import org.mongodb.scala.model.Filters
+import org.reactivestreams.Publisher
 import shopScala.util.Constants._
 import shopScala.util.Util._
 import shopScala.util._
 import shopScala.util.conversion.RxStreamsConversions
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 import scala.util.{Failure, Success}
 
 /*
@@ -22,7 +24,7 @@ import scala.util.{Failure, Success}
     https://github.com/mongodb/mongo-scala-driver/tree/master/examples/src/test/scala/rxStreams
  */
 
-object QueryS10AkkaStreams extends App {
+object QueryS09SDriverRxStreamsWithAkkaStreams extends App {
 
   type MongoObservable[T] = org.mongodb.scala.Observable[T]
 
@@ -49,24 +51,24 @@ object QueryS10AkkaStreams extends App {
         .collect()
     }
 
-    def findUserByName(name: String): Source[Option[User], NotUsed] = {
-      Source.fromPublisher(RxStreamsConversions.observableToPublisher(_findUserByName(name)))
+    def findUserByName(name: String): Publisher[Option[User]] = {
+      RxStreamsConversions.observableToPublisher(_findUserByName(name))
     }
 
-    def findOrdersByUsername(username: String): Source[Seq[Order], NotUsed] = {
-      Source.fromPublisher(RxStreamsConversions.observableToPublisher(_findOrdersByUsername(username)))
+    def findOrdersByUsername(username: String): Publisher[Seq[Order]] = {
+      RxStreamsConversions.observableToPublisher(_findOrdersByUsername(username))
     }
   }   // end dao
 
 
   def logIn(credentials: Credentials): Source[String, NotUsed] = {
-    dao.findUserByName(credentials.username)
-      .map(user => checkUserLoggedIn(user, credentials))
+    Source.fromPublisher(dao.findUserByName(credentials.username))
+      .map(optUser => checkUserLoggedIn(optUser, credentials))
       .map(user => user.name)
   }
 
   def processOrdersOf(username: String): Source[Result, NotUsed] = {
-    dao.findOrdersByUsername(username)
+    Source.fromPublisher(dao.findOrdersByUsername(username))
       .map(orders => new Result(username, orders))
   }
 
@@ -79,10 +81,12 @@ object QueryS10AkkaStreams extends App {
 
     val latch: CountDownLatch = new CountDownLatch(1)
 
-    logIn(credentials)
+    val f: Future[Done] = logIn(credentials)
       .flatMapMerge(1, username => processOrdersOf(username))
       .runForeach(result => result.display())
-      .onComplete {
+
+    //noinspection MatchToPartialFunction
+    f.onComplete(tryy => tryy match {
         case Success(_) =>
           latch.countDown()
           if (isLastInvocation)
@@ -92,7 +96,7 @@ object QueryS10AkkaStreams extends App {
           latch.countDown()
           if (isLastInvocation)
             system.terminate()
-      }
+      })
 
     latch.await()
   }

@@ -4,19 +4,16 @@ import java.util.concurrent.CountDownLatch
 
 import org.mongodb.scala._
 import org.mongodb.scala.model.Filters
-import rx.lang.{scala => rx}
 import shopScala.util.Constants._
 import shopScala.util.Util._
 import shopScala.util._
-import shopScala.util.conversion.RxScalaConversions
 
-/*
-    For conversions from MongoDBObservable to RxScala Observable see:
-    https://mongodb.github.io/mongo-scala-driver/1.1/integrations/
-    https://github.com/mongodb/mongo-scala-driver/tree/master/examples/src/test/scala/rxScala
- */
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+import scala.util.{Failure, Success}
 
-object QueryS07RxObservables extends App {
+
+object QueryS11SDriverFuture extends App {
 
   type MongoObservable[T] = org.mongodb.scala.Observable[T]
 
@@ -27,41 +24,41 @@ object QueryS07RxObservables extends App {
     val usersCollection: MongoCollection[Document] = db.getCollection(USERS_COLLECTION_NAME)
     val ordersCollection: MongoCollection[Document] = db.getCollection(ORDERS_COLLECTION_NAME)
 
-    private def _findUserByName(name: String): MongoObservable[Option[User]] = {
+    private def _findUserByName(name: String): MongoObservable[User] = {
       usersCollection
         .find(Filters.eq("_id", name))
         .first()
         .map(doc => User(doc))
-        .collect()
-        .map(seq => seq.headOption)
     }
 
-    private def _findOrdersByUsername(username: String): MongoObservable[Seq[Order]] = {
+    private def _findOrdersByUsername(username: String): MongoObservable[Order] = {
       ordersCollection
         .find(Filters.eq("username", username))
         .map(doc => Order(doc))
-        .collect()
     }
 
-    def findUserByName(name: String): rx.Observable[Option[User]] = {
-      RxScalaConversions.observableToRxObservable(_findUserByName(name))
+    def findUserByName(name: String): Future[Option[User]] = {
+      _findUserByName(name)
+        .toFuture
+        .map(seq => seq.headOption)
     }
 
-    def findOrdersByUsername(username: String): rx.Observable[Seq[Order]] = {
-      RxScalaConversions.observableToRxObservable(_findOrdersByUsername(username))
+    def findOrdersByUsername(username: String): Future[Seq[Order]] = {
+      _findOrdersByUsername(username)
+        .toFuture
     }
   }   // end dao
 
 
-  def logIn(credentials: Credentials): rx.Observable[String] = {
+  def logIn(credentials: Credentials): Future[String] = {
     dao.findUserByName(credentials.username)
       .map(optUser => checkUserLoggedIn(optUser, credentials))
       .map(user => user.name)
   }
 
-  private def processOrdersOf(username: String): rx.Observable[Result] = {
+  private def processOrdersOf(username: String): Future[Result] = {
     dao.findOrdersByUsername(username)
-      .map(orders => new Result(username, orders))
+      .map(orders => Result(username, orders))
   }
 
   def eCommerceStatistics(credentials: Credentials): Unit = {
@@ -72,10 +69,14 @@ object QueryS07RxObservables extends App {
 
     logIn(credentials)
       .flatMap(username => processOrdersOf(username))
-      .subscribe(result => result.display(),
-        t => { Console.err.println(t.toString); latch.countDown()},
-        () => latch.countDown()
-      )
+      .onComplete {
+        case Success(result) =>
+          result.display()
+          latch.countDown()
+        case Failure(t) =>
+          Console.err.println(t.toString)
+          latch.countDown()
+      }
 
     latch.await()
   }

@@ -30,7 +30,8 @@ object QueryS04JDriverAyncCallback extends App {
         .first(callback)
     }
 
-    private def _findOrdersByUsername(username: String, callback: SingleResultCallback[JList[Order]]): Unit = {
+    private def _findOrdersByUsername(username: String,
+                                      callback: SingleResultCallback[JList[Order]]): Unit = {
       ordersCollection
         .find(Filters.eq("username", username))
         .map(scalaMapper2MongoMapper { doc => Order(doc) })
@@ -40,7 +41,8 @@ object QueryS04JDriverAyncCallback extends App {
     def findUserByName(name: String, callback: SingleResultCallback[Option[User]]): Unit =
       _findUserByName(name, callback)
 
-    def findOrdersByUsername(username: String, callback: SingleResultCallback[JList[Order]]): Unit =
+    def findOrdersByUsername(username: String,
+                             callback: SingleResultCallback[JList[Order]]): Unit =
       _findOrdersByUsername(username, callback)
   }   // end dao
 

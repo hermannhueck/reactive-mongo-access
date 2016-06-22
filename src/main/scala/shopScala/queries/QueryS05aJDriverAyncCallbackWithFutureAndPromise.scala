@@ -59,15 +59,15 @@ object QueryS05aJDriverAyncCallbackWithFutureAndPromise extends App {
       promise.future
     }
 
-    def findOrdersByUsername(username: String): Future[JList[Order]] = {
+    def findOrdersByUsername(username: String): Future[Seq[Order]] = {
 
-      val promise = Promise[JList[Order]]
+      val promise = Promise[Seq[Order]]
 
       _findOrdersByUsername(username, new SingleResultCallback[JList[Order]]() {
 
         override def onResult(orders: JList[Order], t: Throwable): Unit = {
           if (t == null) {
-            promise.success(orders)
+            promise.success(jListToSeq(orders))
           } else {
             promise.failure(t)
           }
@@ -87,7 +87,7 @@ object QueryS05aJDriverAyncCallbackWithFutureAndPromise extends App {
 
   private def processOrdersOf(username: String): Future[Result] = {
     dao.findOrdersByUsername(username)
-      .map(orders => Result(username, jListToSeq(orders)))
+      .map(orders => Result(username, orders))
   }
 
   def eCommerceStatistics(credentials: Credentials): Unit = {

@@ -28,7 +28,7 @@ import scala.util.{Failure, Success}
       https://github.com/sgodbillon/reactivemongo-demo-app
  */
 
-object QueryS14ReactiveMongoWithPublisherAndAkkaStreams extends App {
+object QueryS15ReactiveMongoWithPublisherAndAkkaStreams extends App {
 
   object dao {
 

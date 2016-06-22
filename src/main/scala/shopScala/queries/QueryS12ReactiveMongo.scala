@@ -22,7 +22,7 @@ import scala.util.{Failure, Success}
       https://github.com/sgodbillon/reactivemongo-demo-app
  */
 
-object QueryS11ReactiveMongo extends App {
+object QueryS12ReactiveMongo extends App {
 
   object dao {
 

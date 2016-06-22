@@ -28,11 +28,14 @@ public class Callbacks {
 
     private Callbacks() {
 
-        SingleResultCallback<List<String>> callback = (simpsons, t) -> {
-            if (t != null) {
-                t.printStackTrace();
-            } else {
-                simpsons.forEach(simpson -> System.out.println(simpson));
+        SingleResultCallback<List<String>> callback = new SingleResultCallback<List<String>>() {
+            @Override
+            public void onResult(List<String> simpsons, Throwable t) {
+                if (t != null) {
+                    t.printStackTrace();
+                } else {
+                    simpsons.forEach(simpson -> System.out.println(simpson));
+                }
             }
         };
 

@@ -19,6 +19,9 @@ object Order {
 
   def apply(doc: org.bson.Document): Order =
     apply(doc.getInteger(ID), doc.getString(USERNAME), doc.getInteger(AMOUNT))
+
+  def apply(doc: com.mongodb.DBObject): Order =
+    apply(doc.get(ID).toString.toInt, doc.get(USERNAME).toString, doc.get(AMOUNT).toString.toInt)
 }
 
 case class Order(id: Int, username: String, amount: Int) {
@@ -39,6 +42,8 @@ object User {
   def apply(doc: BSONDocument): User = apply(doc.getAs[String](ID).get, doc.getAs[String](PASSWORD).get)
 
   def apply(doc: org.bson.Document): User = apply(doc.getString(ID), doc.getString(PASSWORD))
+
+  def apply(doc: com.mongodb.DBObject): User = apply(doc.get(ID).toString, doc.get(PASSWORD).toString)
 }
 
 case class User(name: String, password: String) {

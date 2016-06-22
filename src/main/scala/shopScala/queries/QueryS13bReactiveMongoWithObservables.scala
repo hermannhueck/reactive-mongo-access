@@ -2,14 +2,13 @@ package shopScala.queries
 
 import java.util.concurrent.CountDownLatch
 
-import org.reactivestreams.Publisher
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.api.{DefaultDB, MongoConnection, MongoDriver}
 import reactivemongo.bson.BSONDocument
+import rx.lang.{scala => rx}
 import shopScala.util.Constants._
 import shopScala.util.Util._
 import shopScala.util._
-import shopScala.util.conversion.FutureToRxStreamsConversion
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
@@ -23,23 +22,22 @@ import scala.concurrent.{Await, Future}
       https://github.com/sgodbillon/reactivemongo-demo-app
  */
 
-object QueryS13ReactiveMongoWithPublisherAndObservables extends App {
+object QueryS13bReactiveMongoWithObservables extends App {
 
   object dao {
 
     val driver: MongoDriver = new MongoDriver
     val connection: MongoConnection = driver.connection(List("localhost"))
     val fDatabase: Future[DefaultDB] = connection.database(SHOP_DB_NAME)
-    val database = Await.result(fDatabase, Duration.Inf)
-    val usersCollection = database.collection[BSONCollection](USERS_COLLECTION_NAME)
-    val ordersCollection = database.collection[BSONCollection](ORDERS_COLLECTION_NAME)
+    val fUsersCollection: Future[BSONCollection] = fDatabase map { _.collection[BSONCollection](USERS_COLLECTION_NAME) }
+    val fOrdersCollection: Future[BSONCollection] = fDatabase map { _.collection[BSONCollection](ORDERS_COLLECTION_NAME) }
 
     def close(): Unit = {
       connection.close()
       connection.actorSystem.terminate()
     }
 
-    private def _findUserByName(name: String): Future[Option[User]] = {
+    private def _findUserByName(name: String, usersCollection: BSONCollection): Future[Option[User]] = {
       usersCollection
         .find(BSONDocument("_id" -> name))
         .one[BSONDocument]
@@ -50,7 +48,14 @@ object QueryS13ReactiveMongoWithPublisherAndObservables extends App {
         }
     }
 
-    private def _findOrdersByUsername(username: String): Future[Seq[Order]] = {
+    private def _findUserByName(name: String): Future[Option[User]] = {
+      fUsersCollection
+        .flatMap { collection =>
+          _findUserByName(name, collection)
+        }
+    }
+
+    private def _findOrdersByUsername(username: String, ordersCollection: BSONCollection): Future[Seq[Order]] = {
       ordersCollection
         .find(BSONDocument("username" -> username))
         .cursor[BSONDocument]()
@@ -62,30 +67,32 @@ object QueryS13ReactiveMongoWithPublisherAndObservables extends App {
         }
     }
 
-    def findUserByName(name: String): Publisher[_ <: Option[User]] = {
-      FutureToRxStreamsConversion.futureToPublisher(_findUserByName(name))
+    private def _findOrdersByUsername(username: String): Future[Seq[Order]] = {
+      fOrdersCollection
+        .flatMap { collection =>
+          _findOrdersByUsername(username, collection)
+        }
     }
 
-    def findOrdersByUsername(username: String): Publisher[_ <: Seq[Order]] = {
-      FutureToRxStreamsConversion.futureToPublisher(_findOrdersByUsername(username))
+    def findUserByName(name: String): rx.Observable[Option[User]] = {
+      rx.Observable.from(_findUserByName(name))
+    }
+
+    def findOrdersByUsername(username: String): rx.Observable[Seq[Order]] = {
+      rx.Observable.from(_findOrdersByUsername(username))
     }
   }   // end dao
 
 
-  def logIn(credentials: Credentials): rx.lang.scala.Observable[String] = {
-    publisherToObservable(dao.findUserByName(credentials.username))
+  def logIn(credentials: Credentials): rx.Observable[String] = {
+    dao.findUserByName(credentials.username)
       .map(optUser => checkUserLoggedIn(optUser, credentials))
       .map(user => user.name)
   }
 
-  def processOrdersOf(username: String): rx.lang.scala.Observable[Result] = {
-    publisherToObservable(dao.findOrdersByUsername(username))
+  def processOrdersOf(username: String): rx.Observable[Result] = {
+    dao.findOrdersByUsername(username)
       .map(orders => new Result(username, orders))
-  }
-
-  def publisherToObservable[T](pub: Publisher[T]): rx.lang.scala.Observable[T] = {
-    val javaObs: rx.Observable[T] = rx.RxReactiveStreams.toObservable(pub)
-    rx.lang.scala.JavaConversions.toScalaObservable(javaObs)
   }
 
   def eCommerceStatistics(credentials: Credentials, isLastInvocation: Boolean = false): Unit = {

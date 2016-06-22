@@ -41,11 +41,11 @@ object QueryS05JDriverAyncCallbackWithFutureAndPromise extends App {
         .into(new JArrayList[Order], callback)
     }
 
-    class PromiseCallback[T](promise: Promise[T]) extends SingleResultCallback[T] {
+    class PromiseCallback[T1, T2](promise: Promise[T2], convert: T1 => T2) extends SingleResultCallback[T1] {
 
-      override def onResult(result: T, t: Throwable): Unit = {
+      override def onResult(result: T1, t: Throwable): Unit = {
         if (t == null) {
-          promise.success(result)
+          promise.success(convert(result))
         } else {
           promise.failure(t)
         }
@@ -56,16 +56,16 @@ object QueryS05JDriverAyncCallbackWithFutureAndPromise extends App {
 
       val promise = Promise[Option[User]]
 
-      _findUserByName(name, new PromiseCallback[Option[User]](promise))
+      _findUserByName(name, new PromiseCallback[Option[User], Option[User]](promise, optUser => optUser))
 
       promise.future
     }
 
-    def findOrdersByUsername(username: String): Future[JList[Order]] = {
+    def findOrdersByUsername(username: String): Future[Seq[Order]] = {
 
-      val promise = Promise[JList[Order]]
+      val promise = Promise[Seq[Order]]
 
-      _findOrdersByUsername(username, new PromiseCallback[JList[Order]](promise))
+      _findOrdersByUsername(username, new PromiseCallback[JList[Order], Seq[Order]](promise, orders => jListToSeq(orders)))
 
       promise.future
     }
@@ -80,7 +80,7 @@ object QueryS05JDriverAyncCallbackWithFutureAndPromise extends App {
 
   private def processOrdersOf(username: String): Future[Result] = {
     dao.findOrdersByUsername(username)
-      .map(orders => Result(username, jListToSeq(orders)))
+      .map(orders => Result(username, orders))
   }
 
   def eCommerceStatistics(credentials: Credentials): Unit = {
