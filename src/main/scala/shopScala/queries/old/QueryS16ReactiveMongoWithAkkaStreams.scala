@@ -1,4 +1,4 @@
-package shopScala.queries
+package shopScala.queries.old
 
 import java.util.concurrent.CountDownLatch
 

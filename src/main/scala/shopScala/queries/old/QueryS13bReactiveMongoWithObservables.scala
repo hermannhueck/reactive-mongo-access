@@ -1,4 +1,4 @@
-package shopScala.queries
+package shopScala.queries.old
 
 import java.util.concurrent.CountDownLatch
 
@@ -11,8 +11,7 @@ import shopScala.util.Util._
 import shopScala.util._
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Future
 
 /*
     For ReactiveMongo see:

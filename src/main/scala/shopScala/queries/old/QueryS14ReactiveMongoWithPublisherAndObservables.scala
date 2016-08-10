@@ -1,11 +1,7 @@
-package shopScala.queries
+package shopScala.queries.old
 
 import java.util.concurrent.CountDownLatch
 
-import akka.NotUsed
-import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.Source
 import org.reactivestreams.Publisher
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.api.{DefaultDB, MongoConnection, MongoDriver}
@@ -18,7 +14,6 @@ import shopScala.util.conversion.FutureToRxStreamsConversion
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
-import scala.util.{Failure, Success}
 
 /*
     For ReactiveMongo see:
@@ -28,7 +23,7 @@ import scala.util.{Failure, Success}
       https://github.com/sgodbillon/reactivemongo-demo-app
  */
 
-object QueryS15ReactiveMongoWithPublisherAndAkkaStreams extends App {
+object QueryS14ReactiveMongoWithPublisherAndObservables extends App {
 
   object dao {
 
@@ -77,20 +72,21 @@ object QueryS15ReactiveMongoWithPublisherAndAkkaStreams extends App {
   }   // end dao
 
 
-  def logIn(credentials: Credentials): Source[String, NotUsed] = {
-    Source.fromPublisher(dao.findUserByName(credentials.username))
+  def logIn(credentials: Credentials): rx.lang.scala.Observable[String] = {
+    publisherToObservable(dao.findUserByName(credentials.username))
       .map(optUser => checkUserLoggedIn(optUser, credentials))
       .map(user => user.name)
   }
 
-  def processOrdersOf(username: String): Source[Result, NotUsed] = {
-    Source.fromPublisher(dao.findOrdersByUsername(username))
+  def processOrdersOf(username: String): rx.lang.scala.Observable[Result] = {
+    publisherToObservable(dao.findOrdersByUsername(username))
       .map(orders => new Result(username, orders))
   }
 
-  // val system = dao.connection.actorSystem
-  val system = ActorSystem.create("Sys")
-  implicit val materializer = ActorMaterializer.create(system)
+  def publisherToObservable[T](pub: Publisher[T]): rx.lang.scala.Observable[T] = {
+    val javaObs: rx.Observable[T] = rx.RxReactiveStreams.toObservable(pub)
+    rx.lang.scala.JavaConversions.toScalaObservable(javaObs)
+  }
 
   def eCommerceStatistics(credentials: Credentials, isLastInvocation: Boolean = false): Unit = {
 
@@ -99,23 +95,23 @@ object QueryS15ReactiveMongoWithPublisherAndAkkaStreams extends App {
     val latch: CountDownLatch = new CountDownLatch(1)
 
     logIn(credentials)
-      .flatMapMerge(1, username => processOrdersOf(username))
-      .runForeach(result => result.display())
-      .onComplete {
-        case Success(_) =>
-          latch.countDown()
-          if (isLastInvocation) {
-            system.terminate()
-            dao.close()
-          }
-        case Failure(t) =>
+      .flatMap(username => processOrdersOf(username))
+      .subscribe(
+        result => {
+          result.display()
+        },
+        t => {
           Console.err.println(t.toString)
           latch.countDown()
-          if (isLastInvocation) {
-            system.terminate()
+          if (isLastInvocation)
             dao.close()
-          }
-      }
+        },
+        () => {
+          latch.countDown()
+          if (isLastInvocation)
+            dao.close()
+        }
+      )
 
     latch.await()
   }

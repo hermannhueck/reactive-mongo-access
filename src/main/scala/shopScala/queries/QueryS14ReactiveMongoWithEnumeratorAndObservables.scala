@@ -2,9 +2,13 @@ package shopScala.queries
 
 import java.util.concurrent.CountDownLatch
 
+import org.reactivestreams.Publisher
+import play.api.libs.iteratee.Enumerator
+import play.api.libs.streams.Streams
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.api.{DefaultDB, MongoConnection, MongoDriver}
 import reactivemongo.bson.BSONDocument
+import rx.lang.scala.{JavaConversions, Observable}
 import shopScala.util.Constants._
 import shopScala.util.Util._
 import shopScala.util._
@@ -12,7 +16,6 @@ import shopScala.util._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
-import scala.util.{Failure, Success}
 
 /*
     For ReactiveMongo see:
@@ -22,7 +25,7 @@ import scala.util.{Failure, Success}
       https://github.com/sgodbillon/reactivemongo-demo-app
  */
 
-object QueryS12ReactiveMongo extends App {
+object QueryS14ReactiveMongoWithEnumeratorAndObservables extends App {
 
   object dao {
 
@@ -38,48 +41,59 @@ object QueryS12ReactiveMongo extends App {
       connection.actorSystem.terminate()
     }
 
-    private def _findUserByName(name: String): Future[Option[User]] = {
+
+    private def _findUserByName(name: String): Enumerator[User] = {
       usersCollection
         .find(BSONDocument("_id" -> name))
-        .one[BSONDocument]
-        .map { optDoc =>
-          optDoc map { doc =>
-            User(doc)
-          }
-        }
+        .cursor[BSONDocument]()
+        .enumerate()
+        .map(User(_))
     }
 
-    private def _findOrdersByUsername(username: String): Future[Seq[Order]] = {
+    private def _findOrdersByUsername(username: String): Enumerator[Order] = {
       ordersCollection
         .find(BSONDocument("username" -> username))
         .cursor[BSONDocument]()
-        .collect[Seq]()
-        .map { seqOptDoc =>
-          seqOptDoc map { doc =>
-            Order(doc)
-          }
-        }
+        .enumerate()
+        .map(Order(_))
     }
 
-    def findUserByName(name: String): Future[Option[User]] = {
-      _findUserByName(name)
+    private def enumeratorToObservable[T](enumerator: Enumerator[T]): Observable[T] = {
+
+      def toPublisher[T](enumerator: Enumerator[T]): Publisher[T] =
+        Streams.enumeratorToPublisher(enumerator)
+
+      def toJavaObservable[T](publisher: Publisher[T]): rx.Observable[T] =
+        rx.RxReactiveStreams.toObservable(publisher)
+
+      def toObservable[T](publisher: Publisher[T]): Observable[T] =
+        JavaConversions.toScalaObservable(toJavaObservable(publisher))
+
+      toObservable(toPublisher(enumerator))
     }
 
-    def findOrdersByUsername(username: String): Future[Seq[Order]] = {
-      _findOrdersByUsername(username)
+    def findUserByName(name: String): Observable[Option[User]] = {
+      enumeratorToObservable(_findUserByName(name))
+        .toSeq
+        .map(_.headOption)
+    }
+
+    def findOrdersByUsername(username: String): Observable[Order] = {
+      enumeratorToObservable(_findOrdersByUsername(username))
     }
   }   // end dao
 
 
-  def logIn(credentials: Credentials): Future[String] = {
+  def logIn(credentials: Credentials): Observable[String] = {
     dao.findUserByName(credentials.username)
       .map(optUser => checkUserLoggedIn(optUser, credentials))
       .map(user => user.name)
   }
 
-  def processOrdersOf(username: String): Future[Result] = {
-    dao.findOrdersByUsername(username)
-      .map(orders => new Result(username, orders))
+  def processOrdersOf(username: String): Observable[Result] = {
+    dao.findOrdersByUsername(username)    // implicitly converts from Enumerator to Observable
+      .toSeq
+      .map(orders => Result(username, orders))
   }
 
   def eCommerceStatistics(credentials: Credentials, isLastInvocation: Boolean = false): Unit = {
@@ -90,18 +104,22 @@ object QueryS12ReactiveMongo extends App {
 
     logIn(credentials)
       .flatMap(username => processOrdersOf(username))
-      .onComplete {
-        case Success(result) =>
+      .subscribe(
+        result => {
           result.display()
-          latch.countDown()
-          if (isLastInvocation)
-            dao.close()
-        case Failure(t) =>
+        },
+        t => {
           Console.err.println(t.toString)
           latch.countDown()
           if (isLastInvocation)
             dao.close()
-      }
+        },
+        () => {
+          latch.countDown()
+          if (isLastInvocation)
+            dao.close()
+        }
+      )
 
     latch.await()
   }
