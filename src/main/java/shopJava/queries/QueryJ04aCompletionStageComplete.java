@@ -1,6 +1,7 @@
 package shopJava.queries;
 
 import com.mongodb.MongoClient;
+import com.mongodb.MongoClientURI;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import org.bson.Document;
@@ -41,7 +42,7 @@ public class QueryJ04aCompletionStageComplete {
         private final MongoCollection<Document> ordersCollection;
 
         DAO() {
-            final MongoClient client = new MongoClient();
+            final MongoClient client = new MongoClient(new MongoClientURI(MONGODB_URI));
             final MongoDatabase db = client.getDatabase(SHOP_DB_NAME);
             this.usersCollection = db.getCollection(USERS_COLLECTION_NAME);
             this.ordersCollection = db.getCollection(ORDERS_COLLECTION_NAME);

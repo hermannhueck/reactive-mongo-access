@@ -2,7 +2,7 @@ package shopScala.async_reactive
 
 import java.util
 
-import com.mongodb.MongoClient
+import com.mongodb.{MongoClient, MongoClientURI}
 import com.mongodb.client.{MongoCollection, MongoDatabase}
 import org.bson.Document
 import shopScala.util.Constants._
@@ -14,7 +14,7 @@ object SyncJDriver extends App {
   type JList[T] = util.List[T]
   type JArrayList[T] = util.ArrayList[T]
 
-  val client: MongoClient = new MongoClient
+  val client: MongoClient = new MongoClient(new MongoClientURI(MONGODB_URI))
   val db: MongoDatabase = client.getDatabase(SHOP_DB_NAME)
   val usersCollection: MongoCollection[Document] = db.getCollection(USERS_COLLECTION_NAME)
 

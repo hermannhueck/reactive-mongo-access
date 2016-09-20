@@ -42,7 +42,7 @@ public class QueryJ11AkkaStreams {
         private final MongoCollection<Document> ordersCollection;
 
         DAO() {
-            final MongoClient client = MongoClients.create();
+            final MongoClient client = MongoClients.create(MONGODB_URI);
             final MongoDatabase db = client.getDatabase(SHOP_DB_NAME);
             this.usersCollection = db.getCollection(USERS_COLLECTION_NAME);
             this.ordersCollection = db.getCollection(ORDERS_COLLECTION_NAME);

@@ -10,12 +10,12 @@ import shopScala.util.Constants._
 import shopScala.util.User
 import shopScala.util.Util._
 
-object Callbacks extends App {
+object Callback extends App {
 
   type JList[T] = util.List[T]
   type JArrayList[T] = util.ArrayList[T]
 
-  val client: MongoClient = MongoClients.create
+  val client: MongoClient = MongoClients.create(MONGODB_URI)
   val db: MongoDatabase = client.getDatabase(SHOP_DB_NAME)
   val usersCollection: MongoCollection[Document] = db.getCollection(USERS_COLLECTION_NAME)
 

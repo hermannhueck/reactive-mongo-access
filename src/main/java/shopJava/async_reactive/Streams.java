@@ -9,6 +9,7 @@ import rx.Observable;
 import rx.Observer;
 import shopJava.model.User;
 
+import static shopJava.util.Constants.MONGODB_URI;
 import static shopJava.util.Constants.SHOP_DB_NAME;
 import static shopJava.util.Constants.USERS_COLLECTION_NAME;
 import static shopJava.util.Util.sleep;
@@ -20,7 +21,7 @@ public class Streams {
         new Streams();
     }
 
-    private final MongoClient client = MongoClients.create();
+    private final MongoClient client = MongoClients.create(MONGODB_URI);
     private final MongoDatabase db = client.getDatabase(SHOP_DB_NAME);
     private final MongoCollection<Document> usersCollection = db.getCollection(USERS_COLLECTION_NAME);
 

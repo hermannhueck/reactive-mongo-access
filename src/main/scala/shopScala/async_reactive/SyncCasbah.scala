@@ -7,7 +7,7 @@ import shopScala.util.User
 
 object SyncCasbah extends App {
 
-  val client: MongoClient = MongoClient()
+  val client: MongoClient = MongoClient(new MongoClientURI(MONGODB_URI))
   val db: MongoDB = client(SHOP_DB_NAME)
   val usersCollection: MongoCollection = db(USERS_COLLECTION_NAME)
 

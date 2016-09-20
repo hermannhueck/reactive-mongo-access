@@ -2,6 +2,7 @@ package shopJava.model;
 
 import java.util.List;
 
+@SuppressWarnings({"Convert2MethodRef", "WeakerAccess"})
 public class Result {
 
     public final String username;

@@ -11,7 +11,7 @@ object QueryS01CasbahSync extends App {
 
   object dao {
 
-    val client: MongoClient = MongoClient()
+    val client: MongoClient = MongoClient(new MongoClientURI(MONGODB_URI))
     val db: MongoDB = client(SHOP_DB_NAME)
     val usersCollection: MongoCollection = db(USERS_COLLECTION_NAME)
     val ordersCollection: MongoCollection = db(ORDERS_COLLECTION_NAME)

@@ -1,6 +1,7 @@
 package shopJava.create;
 
 import com.mongodb.MongoClient;
+import com.mongodb.MongoClientURI;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import org.bson.Document;
@@ -87,7 +88,7 @@ public class InsertUsersOrders {
 
     public InsertUsersOrders() {
 
-        final MongoClient client = new MongoClient();     //defaults to localhost:27017
+        final MongoClient client = new MongoClient(new MongoClientURI(MONGODB_URI));
         final  MongoDatabase db = client.getDatabase(SHOP_DB_NAME);
 
         final MongoCollection<Document> usersCollection = db.getCollection(USERS_COLLECTION_NAME);

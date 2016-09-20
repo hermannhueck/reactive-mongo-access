@@ -11,22 +11,23 @@ import shopJava.model.User;
 import java.util.ArrayList;
 import java.util.List;
 
+import static shopJava.util.Constants.MONGODB_URI;
 import static shopJava.util.Constants.SHOP_DB_NAME;
 import static shopJava.util.Constants.USERS_COLLECTION_NAME;
 import static shopJava.util.Util.sleep;
 
 @SuppressWarnings("Convert2MethodRef")
-public class Callbacks {
+public class Callback {
 
     public static void main(String[] args) {
-        new Callbacks();
+        new Callback();
     }
 
-    private final MongoClient client = MongoClients.create();
+    private final MongoClient client = MongoClients.create(MONGODB_URI);
     private final MongoDatabase db = client.getDatabase(SHOP_DB_NAME);
     private final MongoCollection<Document> usersCollection = db.getCollection(USERS_COLLECTION_NAME);
 
-    private Callbacks() {
+    private Callback() {
 
         SingleResultCallback<List<String>> callback = new SingleResultCallback<List<String>>() {
             @Override

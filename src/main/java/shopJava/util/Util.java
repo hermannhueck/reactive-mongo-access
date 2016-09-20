@@ -13,6 +13,10 @@ public class Util {
             throw new RuntimeException(new IllegalAccessException("User unknown: " + credentials.username));
         }
         final User user = optUser.get();
+        return checkUserLoggedIn(user, credentials);
+    }
+
+    public static User checkUserLoggedIn(User user, Credentials credentials) {
         if (!user.name.equals(credentials.username)) {
             throw new RuntimeException(new IllegalAccessException("Incorrect first: " + credentials.username));
         }

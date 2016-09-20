@@ -1,6 +1,7 @@
 package shopJava.async_reactive;
 
 import com.mongodb.MongoClient;
+import com.mongodb.MongoClientURI;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import org.bson.Document;
@@ -10,6 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static java.util.stream.Collectors.toList;
+import static shopJava.util.Constants.MONGODB_URI;
 import static shopJava.util.Constants.SHOP_DB_NAME;
 import static shopJava.util.Constants.USERS_COLLECTION_NAME;
 
@@ -20,7 +22,7 @@ public class Sync {
         new Sync();
     }
 
-    private final MongoClient client = new MongoClient();
+    private final MongoClient client = new MongoClient(new MongoClientURI(MONGODB_URI));
     private final MongoDatabase db = client.getDatabase(SHOP_DB_NAME);
     private final MongoCollection<Document> usersCollection = db.getCollection(USERS_COLLECTION_NAME);
 

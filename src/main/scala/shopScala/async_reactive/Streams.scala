@@ -10,7 +10,7 @@ object Streams extends App {
 
   type MongoObservable[T] = org.mongodb.scala.Observable[T]
 
-  val client: MongoClient = MongoClient()
+  val client: MongoClient = MongoClient(MONGODB_URI)
   val db: MongoDatabase = client.getDatabase(SHOP_DB_NAME)
   val usersCollection: MongoCollection[Document] = db.getCollection(USERS_COLLECTION_NAME)
 
