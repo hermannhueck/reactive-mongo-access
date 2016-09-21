@@ -5,10 +5,7 @@ import com.mongodb.MongoClientURI;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import org.bson.Document;
-import shopJava.model.Credentials;
-import shopJava.model.Order;
-import shopJava.model.Result;
-import shopJava.model.User;
+import shopJava.model.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -17,11 +14,13 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.stream.Stream;
 
 import static com.mongodb.client.model.Filters.eq;
 import static java.lang.Thread.sleep;
 import static java.util.stream.Collectors.toList;
 import static shopJava.util.Constants.*;
+import static shopJava.util.Util.average;
 import static shopJava.util.Util.checkUserLoggedIn;
 
 @SuppressWarnings("Convert2MethodRef")
@@ -109,12 +108,18 @@ public class QueryJ04aCompletionStageComplete {
 
     private CompletionStage<Result> processOrdersOf(final String username) {
         return dao.findOrdersByUsername(username)
-                .thenApply(orders -> new Result(username, orders));
+                .thenApply(orders -> {
+                    final IntPair pair =
+                            orders.stream()
+                                    .map(order -> new IntPair(order.amount, 1))
+                                    .reduce(new IntPair(0, 0), (p1, p2) -> new IntPair(p1.first + p2.first, p1.second + p2.second));
+                    return new  Result(username, pair.second, pair.first, average(pair.first, pair.second));
+                });
     }
 
     private void eCommerceStatistics(final Credentials credentials, final boolean isLastInvocation) {
 
-        System.out.println("--- Calculating eCommerce statistings for user \"" + credentials.username + "\" ...");
+        System.out.println("--- Calculating eCommerce statistics for user \"" + credentials.username + "\" ...");
 
         logIn(credentials)
                 .thenCompose(username -> processOrdersOf(username))     // flatMap of CompletionStage

@@ -11,6 +11,7 @@ import com.mongodb.rx.client.MongoCollection;
 import com.mongodb.rx.client.MongoDatabase;
 import org.bson.Document;
 import rx.Observable;
+import rx.Single;
 import shopJava.model.Credentials;
 import shopJava.model.Order;
 import shopJava.model.Result;
@@ -48,13 +49,12 @@ public class QueryJ11AkkaStreams {
             this.ordersCollection = db.getCollection(ORDERS_COLLECTION_NAME);
         }
 
-        private Observable<Optional<User>> _findUserByName(final String name) {
+        private Single<User> _findUserByName(final String name) {
             return usersCollection
                     .find(eq("_id", name))
                     .first()
-                    .map(doc -> new User(doc))      // no null check as we don't get null objects in the stream
-                    .toList()   // conversion to List to check whether we found a user with the specified name
-                    .map(users -> users.size() == 0 ? Optional.empty() : Optional.of(users.get(0)));
+                    .toSingle()
+                    .map(doc -> new User(doc));
         }
 
         private Observable<Order> _findOrdersByUsername(final String username) {
@@ -64,8 +64,8 @@ public class QueryJ11AkkaStreams {
                     .map(doc -> new Order(doc));
         }
 
-        Source<Optional<User>, NotUsed> findUserByName(final String name) {
-            return Source.fromPublisher(toPublisher(_findUserByName(name)));
+        Source<User, NotUsed> findUserByName(final String name) {
+            return Source.fromPublisher(toPublisher(_findUserByName(name).toObservable()));
         }
 
         Source<List<Order>, NotUsed> findOrdersByUsername(final String username) {
@@ -76,7 +76,7 @@ public class QueryJ11AkkaStreams {
 
     private Source<String, NotUsed> logIn(final Credentials credentials) {
         return dao.findUserByName(credentials.username)
-                .map(optUser -> checkUserLoggedIn(optUser, credentials))
+                .map(user -> checkUserLoggedIn(user, credentials))
                 .map(user -> user.name);
     }
 
@@ -90,7 +90,7 @@ public class QueryJ11AkkaStreams {
 
     private void eCommerceStatistics(final Credentials credentials, final boolean isLastInvocation) throws Exception {
 
-        System.out.println("--- Calculating eCommerce statistings for user \"" + credentials.username + "\" ...");
+        System.out.println("--- Calculating eCommerce statistics for user \"" + credentials.username + "\" ...");
 
         final CountDownLatch latch = new CountDownLatch(1);
 

@@ -6,19 +6,18 @@ import com.mongodb.async.client.MongoClients;
 import com.mongodb.async.client.MongoCollection;
 import com.mongodb.async.client.MongoDatabase;
 import org.bson.Document;
-import shopJava.model.Order;
-import shopJava.model.User;
-import shopJava.model.Credentials;
-import shopJava.model.Result;
+import shopJava.model.*;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
+import java.util.stream.Stream;
 
 import static com.mongodb.client.model.Filters.eq;
 import static java.lang.Thread.sleep;
 import static shopJava.util.Constants.*;
+import static shopJava.util.Util.average;
 import static shopJava.util.Util.checkUserLoggedIn;
 
 @SuppressWarnings("Convert2MethodRef")
@@ -80,7 +79,7 @@ public class QueryJ05Callback {
 
         final CountDownLatch latch = new CountDownLatch(1);
 
-        findUser(credentials.username, (optUser, t1) -> {
+        findUser(credentials.username, (optUser, t1) -> {               // 1st callback
 
             try {
                 if (t1 != null) {
@@ -89,14 +88,17 @@ public class QueryJ05Callback {
 
                 checkUserLoggedIn(optUser, credentials);
 
-                processOrdersOf(credentials.username, (orders, t2) -> {
+                processOrdersOf(credentials.username, (orders, t2) -> {     // 2nd encapsulated callback
 
                     if (t2 != null) {
                         t2.printStackTrace();
                         return;
                     }
 
-                    Result result = new Result(credentials.username, orders);
+                    final Stream<Order> orderStream = orders.stream();
+                    final Stream<IntPair> pairStream = orderStream.map(order -> new IntPair(order.amount, 1));
+                    final IntPair pair = pairStream.reduce(new IntPair(0, 0), (p1, p2) -> new IntPair(p1.first + p2.first, p1.second + p2.second));
+                    final Result result = new  Result(credentials.username, pair.second, pair.first, average(pair.first, pair.second));
                     result.display();
                 });
 

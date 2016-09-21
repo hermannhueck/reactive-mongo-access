@@ -7,10 +7,8 @@ import com.mongodb.reactivestreams.client.MongoDatabase;
 import org.bson.Document;
 import org.reactivestreams.Publisher;
 import rx.Observable;
-import shopJava.model.Credentials;
-import shopJava.model.Order;
-import shopJava.model.Result;
-import shopJava.model.User;
+import rx.Single;
+import shopJava.model.*;
 
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
@@ -19,6 +17,7 @@ import static com.mongodb.client.model.Filters.eq;
 import static java.lang.Thread.sleep;
 import static rx.RxReactiveStreams.toObservable;
 import static shopJava.util.Constants.*;
+import static shopJava.util.Util.average;
 import static shopJava.util.Util.checkUserLoggedIn;
 
 @SuppressWarnings("Convert2MethodRef")
@@ -55,11 +54,10 @@ public class QueryJ08RxStreamsWithObservables {
     }   // end DAO
 
 
-    private Observable<String> logIn(final Credentials credentials) {
+    private Single<String> logIn(final Credentials credentials) {
         return toObservable(dao.findUserByName(credentials.username))
+                .toSingle()
                 .map(doc -> new User(doc))      // no null check as we don't get null objects in the stream
-                .toList()   // conversion to List to check whether we found a user with the specified name
-                .map(users -> (Optional<User>)(users.size() == 0 ? Optional.empty() : Optional.of(users.get(0))))
                 .map(optUser -> checkUserLoggedIn(optUser, credentials))
                 .map(user -> user.name);
     }
@@ -67,17 +65,18 @@ public class QueryJ08RxStreamsWithObservables {
     private Observable<Result> processOrdersOf(final String username) {
         return toObservable(dao.findOrdersByUsername(username))
                 .map(doc -> new Order(doc))
-                .toList()
-                .map(orders -> new Result(username, orders));
+                .map(order -> new IntPair(order.amount, 1))
+                .reduce((p1, p2) -> new IntPair(p1.first + p2.first, p1.second + p2.second))
+                .map(p -> new Result(username, p.second, p.first, average(p.first, p.second)));
     }
 
     private void eCommerceStatistics(final Credentials credentials) throws Exception {
 
-        System.out.println("--- Calculating eCommerce statistings for user \"" + credentials.username + "\" ...");
+        System.out.println("--- Calculating eCommerce statistics for user \"" + credentials.username + "\" ...");
 
         final CountDownLatch latch = new CountDownLatch(1);
 
-        logIn(credentials)
+        logIn(credentials).toObservable()
                 .flatMap(username -> processOrdersOf(username))
                 .subscribe(
                         result -> result.display(),

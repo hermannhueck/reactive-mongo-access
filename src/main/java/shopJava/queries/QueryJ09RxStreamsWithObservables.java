@@ -7,10 +7,8 @@ import com.mongodb.rx.client.MongoDatabase;
 import org.bson.Document;
 import org.reactivestreams.Publisher;
 import rx.Observable;
-import shopJava.model.Credentials;
-import shopJava.model.Order;
-import shopJava.model.Result;
-import shopJava.model.User;
+import rx.Single;
+import shopJava.model.*;
 
 import java.util.List;
 import java.util.Optional;
@@ -21,6 +19,7 @@ import static java.lang.Thread.sleep;
 import static rx.RxReactiveStreams.toObservable;
 import static rx.RxReactiveStreams.toPublisher;
 import static shopJava.util.Constants.*;
+import static shopJava.util.Util.average;
 import static shopJava.util.Util.checkUserLoggedIn;
 
 @SuppressWarnings("Convert2MethodRef")
@@ -44,13 +43,12 @@ public class QueryJ09RxStreamsWithObservables {
             this.ordersCollection = db.getCollection(ORDERS_COLLECTION_NAME);
         }
 
-        private Observable<Optional<User>> _findUserByName(final String name) {
+        private Single<User> _findUserByName(final String name) {
             return usersCollection
                     .find(eq("_id", name))
                     .first()
-                    .map(doc -> new User(doc))      // no null check as we don't get null objects in the stream
-                    .toList()   // conversion to List to check whether we found a user with the specified name
-                    .map(users -> users.size() == 0 ? Optional.empty() : Optional.of(users.get(0)));
+                    .toSingle()
+                    .map(doc -> new User(doc));
         }
 
         private Observable<Order> _findOrdersByUsername(final String username) {
@@ -60,34 +58,37 @@ public class QueryJ09RxStreamsWithObservables {
                     .map(doc -> new Order(doc));
         }
 
-        Publisher<Optional<User>> findUserByName(final String name) {
-            return toPublisher(_findUserByName(name));
+        Publisher<User> findUserByName(final String name) {
+            return toPublisher(_findUserByName(name).toObservable());
         }
 
-        Publisher<List<Order>> findOrdersByUsername(final String username) {
-            return toPublisher(_findOrdersByUsername(username).toList());
+        Publisher<Order> findOrdersByUsername(final String username) {
+            return toPublisher(_findOrdersByUsername(username));
         }
     }   // end DAO
 
 
-    private Observable<String> logIn(final Credentials credentials) {
+    private Single<String> logIn(final Credentials credentials) {
         return toObservable(dao.findUserByName(credentials.username))
+                .toSingle()
                 .map(optUser -> checkUserLoggedIn(optUser, credentials))
                 .map(user -> user.name);
     }
 
     private Observable<Result> processOrdersOf(final String username) {
         return toObservable(dao.findOrdersByUsername(username))
-                .map(orders -> new Result(username, orders));
+                .map(order -> new IntPair(order.amount, 1))
+                .reduce((p1, p2) -> new IntPair(p1.first + p2.first, p1.second + p2.second))
+                .map(p -> new Result(username, p.second, p.first, average(p.first, p.second)));
     }
 
     private void eCommerceStatistics(final Credentials credentials) throws Exception {
 
-        System.out.println("--- Calculating eCommerce statistings for user \"" + credentials.username + "\" ...");
+        System.out.println("--- Calculating eCommerce statistics for user \"" + credentials.username + "\" ...");
 
         final CountDownLatch latch = new CountDownLatch(1);
 
-        logIn(credentials)
+        logIn(credentials).toObservable()
                 .flatMap(username -> processOrdersOf(username))
                 .subscribe(
                         result -> result.display(),

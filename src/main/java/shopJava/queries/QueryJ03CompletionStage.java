@@ -5,10 +5,7 @@ import com.mongodb.MongoClientURI;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import org.bson.Document;
-import shopJava.model.Credentials;
-import shopJava.model.Order;
-import shopJava.model.Result;
-import shopJava.model.User;
+import shopJava.model.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,11 +13,13 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 import static com.mongodb.client.model.Filters.eq;
 import static java.lang.Thread.sleep;
 import static java.util.stream.Collectors.toList;
 import static shopJava.util.Constants.*;
+import static shopJava.util.Util.average;
 import static shopJava.util.Util.checkUserLoggedIn;
 
 @SuppressWarnings("Convert2MethodRef")
@@ -81,12 +80,17 @@ public class QueryJ03CompletionStage {
 
     private CompletionStage<Result> processOrdersOf(final String username) {
         return dao.findOrdersByUsername(username)
-                .thenApply(orders -> new Result(username, orders));
+                .thenApply(orders -> {
+                    final Stream<Order> orderStream = orders.stream();
+                    final Stream<IntPair> pairStream = orderStream.map(order -> new IntPair(order.amount, 1));
+                    final IntPair pair = pairStream.reduce(new IntPair(0, 0), (p1, p2) -> new IntPair(p1.first + p2.first, p1.second + p2.second));
+                    return new  Result(username, pair.second, pair.first, average(pair.first, pair.second));
+                });
     }
 
     private void eCommerceStatistics(final Credentials credentials) {
 
-        System.out.println("--- Calculating eCommerce statistings of user \"" + credentials.username + "\" ...");
+        System.out.println("--- Calculating eCommerce statistics of user \"" + credentials.username + "\" ...");
 
         logIn(credentials)
                 .thenCompose(username -> processOrdersOf(username))     // flatMap of CompletionStage

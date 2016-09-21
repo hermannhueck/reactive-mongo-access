@@ -5,23 +5,19 @@ import com.mongodb.MongoClientURI;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import org.bson.Document;
-import shopJava.model.Credentials;
-import shopJava.model.Order;
-import shopJava.model.Result;
-import shopJava.model.User;
+import shopJava.model.*;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
+import java.util.stream.Stream;
 
 import static com.mongodb.client.model.Filters.eq;
 import static java.lang.Thread.sleep;
 import static java.util.stream.Collectors.toList;
 import static shopJava.util.Constants.*;
+import static shopJava.util.Util.average;
 import static shopJava.util.Util.checkUserLoggedIn;
 
 @SuppressWarnings("Convert2MethodRef")
@@ -82,7 +78,9 @@ public class QueryJ02Future {
             final Optional<User> optUser = future.get();
             final User user = checkUserLoggedIn(optUser, credentials);
             return user.name;
-        } catch (Exception e) {
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        } catch (ExecutionException e) {
             throw new RuntimeException(e);
         }
     }
@@ -90,8 +88,10 @@ public class QueryJ02Future {
     private Result processOrdersOf(final String username) {
         try {
             final Future<List<Order>> future = dao.findOrdersByUsername(username);
-            final List<Order> orders = future.get();
-            return new Result(username, orders);
+            final Stream<Order> orderStream = future.get().stream();
+            final Stream<IntPair> pairStream = orderStream.map(order -> new IntPair(order.amount, 1));
+            final IntPair pair = pairStream.reduce(new IntPair(0, 0), (p1, p2) -> new IntPair(p1.first + p2.first, p1.second + p2.second));
+            return new  Result(username, pair.second, pair.first, average(pair.first, pair.second));
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -99,7 +99,7 @@ public class QueryJ02Future {
 
     private void eCommerceStatistics(final Credentials credentials) {
 
-        System.out.println("--- Calculating eCommerce statistings of user \"" + credentials.username + "\" ...");
+        System.out.println("--- Calculating eCommerce statistics of user \"" + credentials.username + "\" ...");
 
         try {
             final String username = logIn(credentials);
