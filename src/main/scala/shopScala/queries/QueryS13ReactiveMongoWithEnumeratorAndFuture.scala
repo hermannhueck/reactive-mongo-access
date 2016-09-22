@@ -28,7 +28,7 @@ object QueryS13ReactiveMongoWithEnumeratorAndFuture extends App {
   object dao {
 
     val driver: MongoDriver = new MongoDriver
-    val connection: MongoConnection = driver.connection(List("localhost"))
+    val connection: MongoConnection = driver.connection(List(MONGODB_HOST_PORT))
     val fDatabase: Future[DefaultDB] = connection.database(SHOP_DB_NAME)
     val database = Await.result(fDatabase, Duration.Inf)
     val usersCollection = database.collection[BSONCollection](USERS_COLLECTION_NAME)
@@ -84,7 +84,7 @@ object QueryS13ReactiveMongoWithEnumeratorAndFuture extends App {
 
   def eCommerceStatistics(credentials: Credentials, isLastInvocation: Boolean = false): Unit = {
 
-    println("--- Calculating eCommerce statistings for user \"" + credentials.username + "\" ...")
+    println(s"--- Calculating eCommerce statistics for user ${credentials.username} ...")
 
     val latch: CountDownLatch = new CountDownLatch(1)
 

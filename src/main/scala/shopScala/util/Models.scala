@@ -2,6 +2,7 @@ package shopScala.util
 
 import org.mongodb.scala.bson.collection.immutable.Document
 import reactivemongo.bson.BSONDocument
+import shopScala.util.Util._
 
 case class Credentials(username: String, password: String)
 
@@ -53,11 +54,13 @@ case class User(name: String, password: String) {
   def toDocument = Document(ID -> name, PASSWORD -> password)
 }
 
-case class Result(username: String, orders: Seq[Order]) {
+case class Result(username: String, orderCount: Int, totalAmount: Int, avgAmount: Int) {
 
-  val orderCount: Int = orders.length
-  val totalAmount: Int = orders.map(_.amount).sum
-  val avgAmount: Int = ((100.0f * totalAmount / orderCount) / 100).round
+  def this(username: String, orderCount: Int, totalAmount: Int) =
+    this(username, orderCount, totalAmount, average(totalAmount, orderCount))
+
+  def this(username: String, orders: Seq[Order]) =
+    this(username, orders.length, orders.map(_.amount).sum)
 
   def display(): Unit = {
     println("--------------------------------------------")
@@ -67,4 +70,9 @@ case class Result(username: String, orders: Seq[Order]) {
     println("\tAverage Amount: " + avgAmount / 100.0 + " $")
     println("--------------------------------------------\n")
   }
+}
+
+object Result {
+  def apply(username: String, orderCount: Int, totalAmount: Int) = new Result(username, orderCount, totalAmount)
+  def apply(username: String, orders: Seq[Order]) = new Result(username, orders)
 }

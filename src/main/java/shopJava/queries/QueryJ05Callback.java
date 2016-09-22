@@ -98,7 +98,7 @@ public class QueryJ05Callback {
                     final Stream<Order> orderStream = orders.stream();
                     final Stream<IntPair> pairStream = orderStream.map(order -> new IntPair(order.amount, 1));
                     final IntPair pair = pairStream.reduce(new IntPair(0, 0), (p1, p2) -> new IntPair(p1.first + p2.first, p1.second + p2.second));
-                    final Result result = new  Result(credentials.username, pair.second, pair.first, average(pair.first, pair.second));
+                    final Result result = new  Result(credentials.username, pair.second, pair.first);
                     result.display();
                 });
 

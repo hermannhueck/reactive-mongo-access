@@ -22,32 +22,29 @@ object QueryS07SDriverRxObservables extends App {
 
   object dao {
 
-    val client: MongoClient = MongoClient()
+    val client: MongoClient = MongoClient(MONGODB_URI)
     val db: MongoDatabase = client.getDatabase(SHOP_DB_NAME)
     val usersCollection: MongoCollection[Document] = db.getCollection(USERS_COLLECTION_NAME)
     val ordersCollection: MongoCollection[Document] = db.getCollection(ORDERS_COLLECTION_NAME)
 
-    private def _findUserByName(name: String): MongoObservable[Option[User]] = {
+    private def _findUserByName(name: String): MongoObservable[User] = {
       usersCollection
         .find(Filters.eq("_id", name))
         .first()
         .map(doc => User(doc))
-        .collect()
-        .map(seq => seq.headOption)
     }
 
-    private def _findOrdersByUsername(username: String): MongoObservable[Seq[Order]] = {
+    private def _findOrdersByUsername(username: String): MongoObservable[Order] = {
       ordersCollection
         .find(Filters.eq("username", username))
         .map(doc => Order(doc))
-        .collect()
     }
 
-    def findUserByName(name: String): rx.Observable[Option[User]] = {
-      RxScalaConversions.observableToRxObservable(_findUserByName(name))
+    def findUserByName(name: String): rx.Observable[User] = {
+      RxScalaConversions.observableToRxObservable(_findUserByName(name)).single
     }
 
-    def findOrdersByUsername(username: String): rx.Observable[Seq[Order]] = {
+    def findOrdersByUsername(username: String): rx.Observable[Order] = {
       RxScalaConversions.observableToRxObservable(_findOrdersByUsername(username))
     }
   }   // end dao
@@ -55,18 +52,20 @@ object QueryS07SDriverRxObservables extends App {
 
   def logIn(credentials: Credentials): rx.Observable[String] = {
     dao.findUserByName(credentials.username)
-      .map(optUser => checkUserLoggedIn(optUser, credentials))
+      .map(user => checkCredentials(user, credentials))
       .map(user => user.name)
   }
 
   private def processOrdersOf(username: String): rx.Observable[Result] = {
-    dao.findOrdersByUsername(username)
-      .map(orders => new Result(username, orders))
+    val obsOrders: rx.Observable[Order] = dao.findOrdersByUsername(username)
+    val obsPairs: rx.Observable[(Int, Int)] = obsOrders.map(order => (order.amount, 1))
+    val obsPair: rx.Observable[(Int, Int)] = obsPairs.foldLeft(0, 0)((t1, t2) => (t1._1 + t2._1, t1._2 + t2._2))
+    obsPair.map(pair => Result(username, pair._2, pair._1))
   }
 
   def eCommerceStatistics(credentials: Credentials): Unit = {
 
-    println("--- Calculating eCommerce statistings for user \"" + credentials.username + "\" ...")
+    println(s"--- Calculating eCommerce statistics for user ${credentials.username} ...")
 
     val latch: CountDownLatch = new CountDownLatch(1)
 

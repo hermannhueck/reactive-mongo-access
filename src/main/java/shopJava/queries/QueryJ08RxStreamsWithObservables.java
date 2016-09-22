@@ -67,7 +67,7 @@ public class QueryJ08RxStreamsWithObservables {
                 .map(doc -> new Order(doc))
                 .map(order -> new IntPair(order.amount, 1))
                 .reduce((p1, p2) -> new IntPair(p1.first + p2.first, p1.second + p2.second))
-                .map(p -> new Result(username, p.second, p.first, average(p.first, p.second)));
+                .map(pair -> new Result(username, pair.second, pair.first));
     }
 
     private void eCommerceStatistics(final Credentials credentials) throws Exception {

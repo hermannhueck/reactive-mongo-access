@@ -1,8 +1,10 @@
 package shopJava.util;
 
 import shopJava.model.Credentials;
+import shopJava.model.Order;
 import shopJava.model.User;
 
+import java.util.List;
 import java.util.Optional;
 
 public class Util {
@@ -16,7 +18,7 @@ public class Util {
         return checkUserLoggedIn(user, credentials);
     }
 
-    public static User checkUserLoggedIn(User user, Credentials credentials) {
+    public static User checkUserLoggedIn(final User user, final Credentials credentials) {
         if (!user.name.equals(credentials.username)) {
             throw new RuntimeException(new IllegalAccessException("Incorrect first: " + credentials.username));
         }
@@ -34,7 +36,11 @@ public class Util {
         }
     }
 
-    public static int average(int totalAmount, int orderCount) {
-        return Math.round((100.0f * totalAmount / orderCount) / 100);
+    public static int average(final int totalAmount, final int orderCount) {
+        return orderCount == 0 ? 0 : Math.round((100.0f * totalAmount / orderCount) / 100);
+    }
+
+    public static int totalAmountOf(final List<Order> orders) {
+        return orders.stream().mapToInt(order -> order.amount).sum();
     }
 }

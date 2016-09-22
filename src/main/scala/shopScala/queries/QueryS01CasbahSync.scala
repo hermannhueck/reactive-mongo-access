@@ -46,12 +46,15 @@ object QueryS01CasbahSync extends App {
   }
 
   private def processOrdersOf(username: String): Result = {
-    Result(username, dao.findOrdersByUsername(username))
+    val (totalAmount, orderCount) = dao.findOrdersByUsername(username)
+        .map(order => (order.amount, 1))
+        .fold(0, 0)((t1, t2) => (t1._1 + t2._1, t1._2 + t2._2))
+    Result(username, orderCount, totalAmount)
   }
 
   def eCommerceStatistics(credentials: Credentials): Unit = {
 
-    println("--- Calculating eCommerce statistings for user \"" + credentials.username + "\" ...")
+    println(s"--- Calculating eCommerce statistics for user ${credentials.username} ...")
 
     try {
       val username: String = logIn(credentials)

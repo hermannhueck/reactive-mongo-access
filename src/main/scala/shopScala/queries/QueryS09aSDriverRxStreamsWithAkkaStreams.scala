@@ -24,52 +24,62 @@ import scala.util.{Failure, Success}
     https://github.com/mongodb/mongo-scala-driver/tree/master/examples/src/test/scala/rxStreams
  */
 
-object QueryS09SDriverRxStreamsWithAkkaStreams extends App {
+object QueryS09aSDriverRxStreamsWithAkkaStreams extends App {
 
   type MongoObservable[T] = org.mongodb.scala.Observable[T]
 
   object dao {
 
-    val client: MongoClient = MongoClient()
+    val client: MongoClient = MongoClient(MONGODB_URI)
     val db: MongoDatabase = client.getDatabase(SHOP_DB_NAME)
     val usersCollection: MongoCollection[Document] = db.getCollection(USERS_COLLECTION_NAME)
     val ordersCollection: MongoCollection[Document] = db.getCollection(ORDERS_COLLECTION_NAME)
 
-    private def _findUserByName(name: String): MongoObservable[Option[User]] = {
+    private def _findUserByName(name: String): MongoObservable[User] = {
       usersCollection
         .find(Filters.eq("_id", name))
         .first()
         .map(doc => User(doc))
-        .collect()
-        .map(seq => seq.headOption)
     }
 
-    private def _findOrdersByUsername(username: String): MongoObservable[Seq[Order]] = {
+    private def _findOrdersByUsername(username: String): MongoObservable[Order] = {
       ordersCollection
         .find(Filters.eq("username", username))
         .map(doc => Order(doc))
-        .collect()
     }
 
-    def findUserByName(name: String): Publisher[Option[User]] = {
+    def findUserByName(name: String): Publisher[User] = {
       RxStreamsConversions.observableToPublisher(_findUserByName(name))
     }
 
-    def findOrdersByUsername(username: String): Publisher[Seq[Order]] = {
+    def findOrdersByUsername(username: String): Publisher[Order] = {
       RxStreamsConversions.observableToPublisher(_findOrdersByUsername(username))
     }
   }   // end dao
 
 
+  def logIn_NAIVE(credentials: Credentials): Source[String, NotUsed] = {
+    val srcUsers: Source[User, NotUsed] = Source.fromPublisher(dao.findUserByName(credentials.username))
+    srcUsers.map(user => checkCredentials(user, credentials))
+      .map(user => user.name)
+  }
+
   def logIn(credentials: Credentials): Source[String, NotUsed] = {
-    Source.fromPublisher(dao.findUserByName(credentials.username))
-      .map(optUser => checkUserLoggedIn(optUser, credentials))
+    val srcUsers: Source[User, NotUsed] = Source.fromPublisher(dao.findUserByName(credentials.username))
+    val srcList: Source[List[User], NotUsed] = srcUsers.fold[List[User]](List.empty)((list, user) => user::list)
+    val srcUser: Source[User, NotUsed] = srcList.map { list =>
+      if (list.isEmpty) throw new NoSuchElementException(s"No user found with name: ${credentials.username}")
+      else list.head
+    }
+    srcUser.map(user => checkCredentials(user, credentials))
       .map(user => user.name)
   }
 
   def processOrdersOf(username: String): Source[Result, NotUsed] = {
-    Source.fromPublisher(dao.findOrdersByUsername(username))
-      .map(orders => new Result(username, orders))
+    val srcOrders: Source[Order, NotUsed] = Source.fromPublisher(dao.findOrdersByUsername(username))
+    val srcPairs: Source[(Int, Int), NotUsed] = srcOrders.map(order => (order.amount, 1))
+    val srcPair: Source[(Int, Int), NotUsed] = srcPairs.fold(0, 0)((t1, t2) => (t1._1 + t2._1, t1._2 + t2._2))
+    srcPair.map(pair => Result(username, pair._2, pair._1))
   }
 
   val system = ActorSystem.create("Sys")
@@ -77,7 +87,7 @@ object QueryS09SDriverRxStreamsWithAkkaStreams extends App {
 
   def eCommerceStatistics(credentials: Credentials, isLastInvocation: Boolean = false): Unit = {
 
-    println("--- Calculating eCommerce statistings for user \"" + credentials.username + "\" ...")
+    println(s"--- Calculating eCommerce statistics for user ${credentials.username} ...")
 
     val latch: CountDownLatch = new CountDownLatch(1)
 

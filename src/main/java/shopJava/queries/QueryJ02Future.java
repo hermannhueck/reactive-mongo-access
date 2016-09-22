@@ -91,7 +91,7 @@ public class QueryJ02Future {
             final Stream<Order> orderStream = future.get().stream();
             final Stream<IntPair> pairStream = orderStream.map(order -> new IntPair(order.amount, 1));
             final IntPair pair = pairStream.reduce(new IntPair(0, 0), (p1, p2) -> new IntPair(p1.first + p2.first, p1.second + p2.second));
-            return new  Result(username, pair.second, pair.first, average(pair.first, pair.second));
+            return new  Result(username, pair.second, pair.first);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

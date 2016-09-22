@@ -28,6 +28,10 @@ object Util {
       user
   }
 
+  def average(totalAmount: Int, orderCount: Int): Int =
+    if (orderCount == 0) 0
+    else ((100.0f * totalAmount / orderCount) / 100).round
+
   def jListToSeq[T](javaList: java.util.List[T]): Seq[T] = Seq.empty ++ JavaConversions.asScalaBuffer(javaList)
 
   def scalaMapper2MongoMapper[A, B](scalaMapper: A => B): com.mongodb.Function[A, B] with Object {def apply(doc: A): B} = {

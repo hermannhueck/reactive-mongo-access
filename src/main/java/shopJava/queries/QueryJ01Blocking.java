@@ -76,7 +76,7 @@ public class QueryJ01Blocking {
         final Stream<Order> orderStream = dao.findOrdersByUsername(username).stream();
         final Stream<IntPair> pairStream = orderStream.map(order -> new IntPair(order.amount, 1));
         final IntPair pair = pairStream.reduce(new IntPair(0, 0), (p1, p2) -> new IntPair(p1.first + p2.first, p1.second + p2.second));
-        return new  Result(username, pair.second, pair.first, average(pair.first, pair.second));
+        return new  Result(username, pair.second, pair.first);
     }
 
     private void eCommerceStatistics(final Credentials credentials) {

@@ -113,7 +113,7 @@ public class QueryJ04aCompletionStageComplete {
                             orders.stream()
                                     .map(order -> new IntPair(order.amount, 1))
                                     .reduce(new IntPair(0, 0), (p1, p2) -> new IntPair(p1.first + p2.first, p1.second + p2.second));
-                    return new  Result(username, pair.second, pair.first, average(pair.first, pair.second));
+                    return new  Result(username, pair.second, pair.first);
                 });
     }
 

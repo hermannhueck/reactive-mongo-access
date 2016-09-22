@@ -2,7 +2,10 @@ package shopJava.model;
 
 import java.util.List;
 
-@SuppressWarnings({"Convert2MethodRef", "WeakerAccess"})
+import static shopJava.util.Util.average;
+import static shopJava.util.Util.totalAmountOf;
+
+@SuppressWarnings("WeakerAccess")
 public class Result {
 
     public final String username;
@@ -17,23 +20,12 @@ public class Result {
         this.avgAmount = avgAmount;
     }
 
+    public Result(final String username, final int orderCount, final int totalAmount) {
+        this(username, orderCount, totalAmount, average(totalAmount, orderCount));
+    }
+
     public Result(final String username, final List<Order> orders) {
-        this.username = username;
-        this.orderCount = orders.size();
-        this.totalAmount = calculateTotal(orders);
-        this.avgAmount = calculateAverage();
-    }
-
-    private int calculateAverage() {
-        return Math.round((100.0f * totalAmount / orderCount) / 100);
-    }
-
-    private int calculateTotal(final List<Order> orders) {
-        return orders.stream().mapToInt(order -> amountOf(order)).sum();
-    }
-
-    private int amountOf(final Order order) {
-        return order.amount;
+        this(username, orders.size(), totalAmountOf(orders));
     }
 
     @Override

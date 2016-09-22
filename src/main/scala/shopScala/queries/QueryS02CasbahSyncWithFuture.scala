@@ -17,7 +17,7 @@ object QueryS02CasbahSyncWithFuture extends App {
 
   object dao {
 
-    val client: MongoClient = MongoClient()
+    val client: MongoClient = MongoClient(new MongoClientURI(MONGODB_URI))
     val db: MongoDB = client(SHOP_DB_NAME)
     val usersCollection: MongoCollection = db(USERS_COLLECTION_NAME)
     val ordersCollection: MongoCollection = db(ORDERS_COLLECTION_NAME)
@@ -57,12 +57,17 @@ object QueryS02CasbahSyncWithFuture extends App {
 
   private def processOrdersOf(username: String): Future[Result] = {
     dao.findOrdersByUsername(username)
-      .map(orders => Result(username, orders))
+      .map(orders => {
+        val (totalAmount, orderCount) =
+          orders.map(order => (order.amount, 1))
+            .fold(0, 0)((t1, t2) => (t1._1 + t2._1, t1._2 + t2._2))
+        Result(username, orderCount, totalAmount)
+      })
   }
 
   def eCommerceStatistics(credentials: Credentials): Unit = {
 
-    println("--- Calculating eCommerce statistings for user \"" + credentials.username + "\" ...")
+    println(s"--- Calculating eCommerce statistics for user ${credentials.username} ...")
 
     val latch: CountDownLatch = new CountDownLatch(1)
 

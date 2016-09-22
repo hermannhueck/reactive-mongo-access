@@ -19,7 +19,7 @@ object QueryS11SDriverFuture extends App {
 
   object dao {
 
-    val client: MongoClient = MongoClient()
+    val client: MongoClient = MongoClient(MONGODB_URI)
     val db: MongoDatabase = client.getDatabase(SHOP_DB_NAME)
     val usersCollection: MongoCollection[Document] = db.getCollection(USERS_COLLECTION_NAME)
     val ordersCollection: MongoCollection[Document] = db.getCollection(ORDERS_COLLECTION_NAME)
@@ -63,7 +63,7 @@ object QueryS11SDriverFuture extends App {
 
   def eCommerceStatistics(credentials: Credentials): Unit = {
 
-    println("--- Calculating eCommerce statistings for user \"" + credentials.username + "\" ...")
+    println(s"--- Calculating eCommerce statistics for user ${credentials.username} ...")
 
     val latch: CountDownLatch = new CountDownLatch(1)
 

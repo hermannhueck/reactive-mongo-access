@@ -15,14 +15,14 @@ import scala.concurrent.{Future, Promise}
 import scala.util.{Failure, Success}
 
 
-object QueryS05JDriverAyncCallbackWithFutureAndPromise extends App {
+object QueryS05bJDriverAyncCallbackWithFutureAndPromise extends App {
 
   type JList[T] = java.util.List[T]
   type JArrayList[T] = java.util.ArrayList[T]
 
   object dao {
 
-    val client: MongoClient = MongoClients.create
+    val client: MongoClient = MongoClients.create(MONGODB_URI)
     val db: MongoDatabase = client.getDatabase(SHOP_DB_NAME)
     val usersCollection: MongoCollection[Document] = db.getCollection(USERS_COLLECTION_NAME)
     val ordersCollection: MongoCollection[Document] = db.getCollection(ORDERS_COLLECTION_NAME)
@@ -80,12 +80,17 @@ object QueryS05JDriverAyncCallbackWithFutureAndPromise extends App {
 
   private def processOrdersOf(username: String): Future[Result] = {
     dao.findOrdersByUsername(username)
-      .map(orders => Result(username, orders))
+      .map(orders => {
+        val (totalAmount, orderCount) =
+          orders.map(order => (order.amount, 1))
+            .fold(0, 0)((t1, t2) => (t1._1 + t2._1, t1._2 + t2._2))
+        Result(username, orderCount, totalAmount)
+      })
   }
 
   def eCommerceStatistics(credentials: Credentials): Unit = {
 
-    println("--- Calculating eCommerce statistings for user \"" + credentials.username + "\" ...")
+    println(s"--- Calculating eCommerce statistics for user ${credentials.username} ...")
 
     val latch: CountDownLatch = new CountDownLatch(1)
 
