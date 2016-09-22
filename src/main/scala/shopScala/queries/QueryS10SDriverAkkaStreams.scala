@@ -58,11 +58,9 @@ object QueryS10SDriverAkkaStreams extends App {
 
   def logIn(credentials: Credentials): Source[String, NotUsed] = {
     dao.findUserByName(credentials.username)
-      .fold[List[User]](List.empty)((list, user) => user::list)
-      .map { list =>
-        if (list.isEmpty) throw new NoSuchElementException(s"No user found with name: ${credentials.username}")
-        else list.head
-      }.map(user => checkCredentials(user, credentials))
+      .fold[Seq[User]](Seq.empty)((seq, user) => user +: seq)
+      .map(seq => firstUserInSeq(seq, credentials.username))
+      .map(user => checkCredentials(user, credentials))
       .map(user => user.name)
   }
 

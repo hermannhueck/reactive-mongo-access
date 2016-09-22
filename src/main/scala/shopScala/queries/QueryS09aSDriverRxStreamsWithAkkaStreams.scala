@@ -66,12 +66,10 @@ object QueryS09aSDriverRxStreamsWithAkkaStreams extends App {
 
   def logIn(credentials: Credentials): Source[String, NotUsed] = {
     val srcUsers: Source[User, NotUsed] = Source.fromPublisher(dao.findUserByName(credentials.username))
-    val srcList: Source[List[User], NotUsed] = srcUsers.fold[List[User]](List.empty)((list, user) => user::list)
-    val srcUser: Source[User, NotUsed] = srcList.map { list =>
-      if (list.isEmpty) throw new NoSuchElementException(s"No user found with name: ${credentials.username}")
-      else list.head
-    }
-    srcUser.map(user => checkCredentials(user, credentials))
+    val srcList: Source[Seq[User], NotUsed] = srcUsers.fold[Seq[User]](Seq.empty)((list, user) => user +: list)
+    val srcUser: Source[User, NotUsed] = srcList.map(seq => firstUserInSeq(seq, credentials.username))
+    srcUser
+      .map(user => checkCredentials(user, credentials))
       .map(user => user.name)
   }
 

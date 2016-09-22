@@ -73,10 +73,8 @@ object QueryS15ReactiveMongoWithEnumeratorAndAkkaStreams extends App {
       toSource(toPublisher(enumerator))
     }
 
-    def findUserByName(name: String): Source[Option[User], NotUsed] = {
+    def findUserByName(name: String): Source[User, NotUsed] = {
       enumeratorToSource(_findUserByName(name))
-        .grouped(1)       // creates a List with max 1 element
-        .map(_.headOption)
     }
 
     def findOrdersByUsername(username: String): Source[Order, NotUsed] = {
@@ -87,14 +85,17 @@ object QueryS15ReactiveMongoWithEnumeratorAndAkkaStreams extends App {
 
   def logIn(credentials: Credentials): Source[String, NotUsed] = {
     dao.findUserByName(credentials.username)
-      .map(optUser => checkUserLoggedIn(optUser, credentials))
+      .fold[Seq[User]](Seq.empty)((seq, user) => user +: seq)
+      .map(seq => firstUserInSeq(seq, credentials.username))
+      .map(user => checkCredentials(user, credentials))
       .map(user => user.name)
   }
 
   def processOrdersOf(username: String): Source[Result, NotUsed] = {
     dao.findOrdersByUsername(username)
-      .grouped(1000)       // creates a List with max 1000 elements
-      .map(orders => new Result(username, orders))
+      .map(order => (order.amount, 1))
+      .fold(0, 0)((t1, t2) => (t1._1 + t2._1, t1._2 + t2._2))
+      .map(pair => Result(username, pair._2, pair._1))
   }
 
   // val system = dao.connection.actorSystem

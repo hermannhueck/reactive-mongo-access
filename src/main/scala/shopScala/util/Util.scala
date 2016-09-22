@@ -32,6 +32,10 @@ object Util {
     if (orderCount == 0) 0
     else ((100.0f * totalAmount / orderCount) / 100).round
 
+  def firstUserInSeq(seq: Seq[User], username: String): User =
+    if (seq.isEmpty) throw new NoSuchElementException(s"No user found with name: ${username}")
+    else seq.head
+
   def jListToSeq[T](javaList: java.util.List[T]): Seq[T] = Seq.empty ++ JavaConversions.asScalaBuffer(javaList)
 
   def scalaMapper2MongoMapper[A, B](scalaMapper: A => B): com.mongodb.Function[A, B] with Object {def apply(doc: A): B} = {

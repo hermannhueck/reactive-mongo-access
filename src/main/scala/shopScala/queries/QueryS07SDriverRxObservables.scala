@@ -41,7 +41,8 @@ object QueryS07SDriverRxObservables extends App {
     }
 
     def findUserByName(name: String): rx.Observable[User] = {
-      RxScalaConversions.observableToRxObservable(_findUserByName(name)).single
+      RxScalaConversions.observableToRxObservable(_findUserByName(name))
+        .single
     }
 
     def findOrdersByUsername(username: String): rx.Observable[Order] = {

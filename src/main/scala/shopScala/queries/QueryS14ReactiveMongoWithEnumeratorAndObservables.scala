@@ -72,10 +72,9 @@ object QueryS14ReactiveMongoWithEnumeratorAndObservables extends App {
       toObservable(toPublisher(enumerator))
     }
 
-    def findUserByName(name: String): Observable[Option[User]] = {
+    def findUserByName(name: String): Observable[User] = {
       enumeratorToObservable(_findUserByName(name))
-        .toSeq
-        .map(_.headOption)
+        .single
     }
 
     def findOrdersByUsername(username: String): Observable[Order] = {
@@ -86,14 +85,15 @@ object QueryS14ReactiveMongoWithEnumeratorAndObservables extends App {
 
   def logIn(credentials: Credentials): Observable[String] = {
     dao.findUserByName(credentials.username)
-      .map(optUser => checkUserLoggedIn(optUser, credentials))
+      .map(user => checkCredentials(user, credentials))
       .map(user => user.name)
   }
 
   def processOrdersOf(username: String): Observable[Result] = {
-    dao.findOrdersByUsername(username)    // implicitly converts from Enumerator to Observable
-      .toSeq
-      .map(orders => Result(username, orders))
+    dao.findOrdersByUsername(username)
+      .map(order => (order.amount, 1))
+      .foldLeft(0, 0)((t1, t2) => (t1._1 + t2._1, t1._2 + t2._2))
+      .map(pair => Result(username, pair._2, pair._1))
   }
 
   def eCommerceStatistics(credentials: Credentials, isLastInvocation: Boolean = false): Unit = {
