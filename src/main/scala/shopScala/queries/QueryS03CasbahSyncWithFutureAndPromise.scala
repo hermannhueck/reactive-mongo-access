@@ -37,9 +37,11 @@ object QueryS03CasbahSyncWithFutureAndPromise extends App {
 
     def findUserByName(name: String): Future[Option[User]] = {
       val p = Promise[Option[User]]
-      p.complete(Try {
-        _findUserByName(name)
-      })
+      Future {
+        p.complete(Try {
+          _findUserByName(name)
+        })
+      }
       p.future
     }
 
